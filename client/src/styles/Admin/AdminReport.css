@@ -1,0 +1,62 @@
+/* STAT */
+.report-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.report-stat-card {
+  background: #1e293b;
+  padding: 16px;
+  border-radius: 12px;
+  color: #cbd5e1;
+}
+
+.report-stat-card strong {
+  font-size: 20px;
+}
+
+/* TABS */
+.report-tabs {
+  display: flex;
+  gap: 10px;
+}
+
+.report-tabs button {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  background: #334155;
+  color: #cbd5e1;
+}
+
+.report-tabs .active {
+  background: #facc15;
+  color: black;
+}
+
+/* TABLE */
+.admin-thumb {
+  width: 60px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* BAR */
+.report-bar-wrap {
+  height: 8px;
+  background: #1e293b;
+  border-radius: 999px;
+}
+
+.report-bar {
+  height: 100%;
+  background: #22c55e;
+  border-radius: 999px;
+}
+
+.report-bar.snack {
+  background: #facc15;
+}

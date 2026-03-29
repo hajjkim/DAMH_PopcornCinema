@@ -1,0 +1,129 @@
+.admin-page-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ACTION */
+.admin-page-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* BUTTON */
+.admin-btn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.admin-btn-primary {
+  background: linear-gradient(90deg, #facc15, #f59e0b);
+}
+
+.admin-btn-outline {
+  background: transparent;
+  border: 1px solid #ccc;
+}
+
+.admin-btn-danger {
+  background: #ef4444;
+  color: #fff;
+}
+
+.admin-btn-sm {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+/* CARD */
+.admin-card {
+  background: #0f2a44;
+  padding: 16px;
+  border-radius: 14px;
+  color: #fff;
+}
+
+/* FILTER */
+.admin-filter-form {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.admin-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-form-group input,
+.admin-form-group select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+}
+
+.admin-filter-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* TABLE */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 10px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.admin-table th {
+  text-align: left;
+  opacity: 0.8;
+}
+
+/* BADGE */
+.admin-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.admin-badge-success {
+  background: #22c55e;
+}
+
+.admin-badge-danger {
+  background: #ef4444;
+}
+
+/* ACTION */
+.admin-table-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* EMPTY */
+.admin-empty {
+  text-align: center;
+  padding: 20px;
+  opacity: 0.7;
+}
+.admin-right {
+  background: #0b1f33;
+}
+.admin-card {
+  background: #0f2a44;
+}
+.admin-btn {
+  text-decoration: none;
+  display: inline-block;
+}

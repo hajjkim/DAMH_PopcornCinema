@@ -1,0 +1,51 @@
+.snack-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.snack-filter {
+  display: flex;
+  gap: 10px;
+}
+
+/* IMAGE */
+.snack-thumb {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+/* DETAIL */
+.snack-detail {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+}
+
+.snack-detail-img {
+  width: 100%;
+  border-radius: 12px;
+}
+
+/* TABLE */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #cbd5e1;
+}
+
+.admin-table td,
+.admin-table th {
+  padding: 12px;
+  border-bottom: 1px solid #1e293b;
+}
+
+.admin-table th {
+  color: #94a3b8;
+}
+
+.admin-table tr:hover {
+  background: rgba(255,255,255,0.03);
+}
