@@ -1,0 +1,97 @@
+.profile-page {
+  min-height: 100vh;
+  background: #082a5b;
+  color: #fff;
+  padding: 40px 20px;
+  font-family: "Inter", sans-serif;
+}
+
+.profile-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.profile-card {
+  display: flex;
+  gap: 24px;
+  background: #0b356f;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  margin-bottom: 32px;
+}
+
+.profile-avatar img {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #f5c518;
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.profile-info p {
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+
+.btn-logout {
+  margin-top: 16px;
+  padding: 8px 20px;
+  border: none;
+  border-radius: 999px;
+  background: #f5c518;
+  color: #082a5b;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-logout:hover {
+  filter: brightness(1.05);
+}
+
+/* Section lịch sử / khuyến mãi */
+.profile-section {
+  margin-bottom: 32px;
+}
+
+.profile-section h2 {
+  font-size: 22px;
+  margin-bottom: 12px;
+  color: #f5c518;
+}
+
+.profile-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+  margin-bottom: 12px;
+  background: #0b356f;
+  color: #fff;
+}
+
+.invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.invoice-table th,
+.invoice-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.promo-list {
+  list-style: disc inside;
+  padding-left: 12px;
+}
+
+.promo-list li {
+  margin-bottom: 6px;
+}

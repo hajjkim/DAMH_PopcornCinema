@@ -1,11 +1,21 @@
 {
-  "dependencies": {
-    "cors": "^2.8.6",
-    "dotenv": "^17.3.1",
-    "express": "^5.2.1",
-    "mongoose": "^9.3.3"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.14"
+  "name": "popcorn-cinema",
+  "version": "1.0.0",
+  "description": "Popcorn Cinema - Movie Booking Application",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "install": "npm install && npm install --workspace=client && npm install --workspace=server",
+    "dev": "npm run dev --workspace=client & npm run dev --workspace=server",
+    "dev:client": "npm run dev --workspace=client",
+    "dev:server": "npm run dev --workspace=server",
+    "build": "npm run build --workspace=client",
+    "seed": "npm run seed --workspace=server",
+    "testdb": "npm run testdb --workspace=server",
+    "start": "npm run start --workspace=server",
+    "start:client": "npm run preview --workspace=client"
   }
 }

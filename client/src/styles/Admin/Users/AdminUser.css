@@ -1,0 +1,45 @@
+.admin-user-filter {
+  display: flex;
+  gap: 10px;
+}
+
+.admin-user-card {
+  background: #0f172a;
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.admin-user-card-top {
+  display: flex;
+  justify-content: space-between;
+}
+
+/* TABLE */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #cbd5e1;
+}
+
+.admin-table td,
+.admin-table th {
+  padding: 12px;
+  border-bottom: 1px solid #1e293b;
+}
+
+.admin-table tr:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+/* BADGE */
+.admin-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.admin-badge-success { background: #22c55e; }
+.admin-badge-danger { background: #ef4444; }
+.admin-badge-warning { background: #f59e0b; }
+.admin-badge-info { background: #3b82f6; }
+.admin-badge-secondary { background: #64748b; }

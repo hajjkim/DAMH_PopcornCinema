@@ -1,0 +1,47 @@
+.admin-promotion-filter {
+  display: flex;
+  gap: 10px;
+}
+
+/* THUMB */
+.admin-promotion-thumb {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* DETAIL */
+.promotion-detail-layout {
+  display: flex;
+  gap: 20px;
+}
+
+.promotion-detail-poster {
+  width: 200px;
+  border-radius: 12px;
+}
+
+/* TABLE reuse */
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #cbd5e1;
+}
+
+.admin-table td,
+.admin-table th {
+  padding: 12px;
+  border-bottom: 1px solid #1e293b;
+}
+
+/* BADGE */
+.admin-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.admin-badge-success { background: #22c55e; }
+.admin-badge-secondary { background: #64748b; }
+.admin-badge-danger { background: #ef4444; }
