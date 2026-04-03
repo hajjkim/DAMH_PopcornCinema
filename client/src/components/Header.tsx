@@ -2,22 +2,35 @@ import "../styles/layout.css";
 import logo from "../assets/images/logo/logo.png";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
+import { getCurrentUser, logout, isAuthenticated, type CurrentUser } from "../utils/auth";
 
 export default function Header() {
   const navigate = useNavigate();
 
-  const storedUser = localStorage.getItem("currentUser");
-  const user = storedUser ? JSON.parse(storedUser) : null;
-
+  const [user, setUser] = useState<CurrentUser | null>(getCurrentUser());
+  const [authed, setAuthed] = useState(isAuthenticated());
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = () => {
-    localStorage.removeItem("currentUser");
+    logout();
+    setOpen(false);
     navigate("/");
   };
 
-  // đóng dropdown khi click ngoài
+  useEffect(() => {
+    const syncAuthState = () => {
+      setUser(getCurrentUser());
+      setAuthed(isAuthenticated());
+    };
+
+    window.addEventListener("auth-changed", syncAuthState);
+
+    return () => {
+      window.removeEventListener("auth-changed", syncAuthState);
+    };
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -35,24 +48,20 @@ export default function Header() {
   return (
     <header className="navbar">
       <div className="container nav-wrapper">
-        {/* LOGO */}
         <div className="logo">
           <Link to="/">
             <img src={logo} alt="Popcorn Cinema" />
           </Link>
         </div>
 
-        {/* MENU */}
         <nav className="nav-menu">
           <Link to="/">Trang chủ</Link>
           <Link to="/movies">Phim</Link>
-          <Link to="/showtimes">Lịch chiếu</Link>
           <Link to="/promotions">Khuyến mãi</Link>
         </nav>
 
-        {/* ACTIONS */}
         <div className="nav-actions">
-          {user ? (
+          {authed && user ? (
             <div className="nav-user" ref={dropdownRef}>
               <button
                 className="nav-user-trigger"
@@ -76,10 +85,7 @@ export default function Header() {
                     </Link>
                   )}
 
-                  <button
-                    className="nav-logout-btn"
-                    onClick={handleLogout}
-                  >
+                  <button className="nav-logout-btn" onClick={handleLogout}>
                     Đăng xuất
                   </button>
                 </div>

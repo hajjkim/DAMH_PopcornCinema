@@ -1,28 +1,52 @@
 import { Router } from "express";
-import { register, login } from "../services/auth.service";
+import { login, register } from "../services/auth.service";
 
 const router = Router();
 
-// Đăng ký
 router.post("/register", async (req, res) => {
+  try {
     const { fullName, email, password } = req.body;
-    try {
-        const user = await register(fullName, email, password);
-        res.status(201).json(user);
-    } catch (err: any) {
-        res.status(400).json({ message: err.message });
+
+    if (!fullName || !email || !password) {
+      res.status(400).json({ message: "fullName, email, password are required" });
+      return;
     }
+
+    if (String(password).length < 6) {
+      res.status(400).json({ message: "Password must be at least 6 characters" });
+      return;
+    }
+
+    const result = await register({
+      fullName: String(fullName),
+      email: String(email),
+      password: String(password),
+    });
+
+    res.status(201).json(result);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message || "Register failed" });
+  }
 });
 
-// Đăng nhập
 router.post("/login", async (req, res) => {
+  try {
     const { email, password } = req.body;
-    try {
-        const { token, user } = await login(email, password);
-        res.json({ token, user });
-    } catch (err: any) {
-        res.status(400).json({ message: err.message });
+
+    if (!email || !password) {
+      res.status(400).json({ message: "email and password are required" });
+      return;
     }
+
+    const result = await login({
+      email: String(email),
+      password: String(password),
+    });
+
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message || "Login failed" });
+  }
 });
 
 export default router;

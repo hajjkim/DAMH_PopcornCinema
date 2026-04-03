@@ -2,6 +2,8 @@ import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../../styles/LoginPage.css";
 import logo from "../../assets/images/logo/logo.png";
+import { registerApi } from "../../services/auth.api";
+import { saveAuth } from "../../utils/auth";
 
 type RegisterForm = {
   fullName: string;
@@ -21,15 +23,16 @@ export default function RegisterPage() {
   });
 
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setError("");
 
-    // validate
     if (!form.fullName || !form.email || !form.password || !form.confirmPassword) {
       setError("❌ Vui lòng nhập đầy đủ thông tin");
       return;
@@ -45,19 +48,32 @@ export default function RegisterPage() {
       return;
     }
 
-    console.log("Register data:", form);
+    try {
+      setLoading(true);
 
-    // TODO: gọi API
+      const data = await registerApi(form.fullName, form.email, form.password);
 
-    alert("🎉 Đăng ký thành công!");
-    navigate("/auth/login");
+      saveAuth(data.token, {
+        _id: data.user._id,
+        fullName: data.user.fullName,
+        email: data.user.email,
+        phone: data.user.phone,
+        avatar: data.user.avatar,
+        role: data.user.role,
+        status: data.user.status,
+      });
+
+      navigate("/");
+    } catch (err: any) {
+      setError(err.message || "❌ Đăng ký thất bại");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="login-page">
       <div className="login-container">
-
-        {/* LEFT */}
         <div className="login-left">
           <div className="login-overlay"></div>
 
@@ -73,15 +89,12 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* RIGHT */}
         <div className="login-right">
           <div className="login-card">
-
             <h2>Đăng ký</h2>
             <p className="login-sub">Tạo tài khoản mới 🚀</p>
 
             <form onSubmit={handleSubmit} className="login-form">
-
               <div className="input-group">
                 <label>Họ và tên</label>
                 <input
@@ -128,22 +141,16 @@ export default function RegisterPage() {
 
               {error && <p className="login-error">{error}</p>}
 
-              <button type="submit" className="login-btn">
-                Đăng ký
+              <button type="submit" className="login-btn" disabled={loading}>
+                {loading ? "Đang đăng ký..." : "Đăng ký"}
               </button>
 
               <p className="login-footer">
-                Đã có tài khoản?{" "}
-                <Link to="/auth/login">
-                  Đăng nhập
-                </Link>
+                Đã có tài khoản? <Link to="/auth/login">Đăng nhập</Link>
               </p>
-
             </form>
-
           </div>
         </div>
-
       </div>
     </div>
   );

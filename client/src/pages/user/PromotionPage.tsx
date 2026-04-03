@@ -1,8 +1,32 @@
 import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import "../../styles/PromotionPage.css";
-import { promotions } from "../../data/promotions";
+import { getPromotions, type Promotion } from "../../services/promotion.api";
 
 export default function PromotionPage() {
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string>("");
+
+  useEffect(() => {
+    const loadPromotions = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getPromotions();
+        setPromotions(data);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Không tải được khuyến mãi";
+        setError(message);
+        console.error("Error loading promotions:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPromotions();
+  }, []);
+
   return (
     <main className="promotion-page">
       <div className="promotion-container">
@@ -13,23 +37,30 @@ export default function PromotionPage() {
           </div>
 
           <div className="promotion-grid">
-            {promotions.map((item) => (
-            <Link
-              to={`/promotions/${item.id}`}
-              className="promotion-card"
-              key={item.id}
-            >
-              <div className="promotion-image-wrap">
-                <img src={item.image} alt={item.title} />
-              </div>
+            {isLoading && <p>Đang tải khuyến mãi...</p>}
+            {error && <p>Lỗi: {error}</p>}
+            {!isLoading && !error && promotions.length === 0 && (
+              <p>Không có khuyến mãi nào</p>
+            )}
+            {!isLoading &&
+              !error &&
+              promotions.map((item) => (
+                <Link
+                  to={`/promotions/${item._id}`}
+                  className="promotion-card"
+                  key={item._id}
+                >
+                  <div className="promotion-image-wrap">
+                    <img src={"/images/logo/logo.png"} alt={item.code} />
+                  </div>
 
-              <div className="promotion-card-body">
-                <h3>{item.title}</h3>
-                {item.description && <p>{item.description}</p>}
-                <span className="promotion-btn">Xem chi tiết</span>
-              </div>
-            </Link>
-          ))}
+                  <div className="promotion-card-body">
+                    <h3>{item.code}</h3>
+                    {item.description && <p>{item.description}</p>}
+                    <span className="promotion-btn">Xem chi tiết</span>
+                  </div>
+                </Link>
+              ))}
           </div>
         </section>
       </div>

@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "../../styles/SnacksPage.css";
+import { getSnacks, type Snack } from "../../services/snack.api";
 
 const qrImage = "/images/payment/qr-demo.png";
+const drinkOptions = ["Pepsi", "Nước suối", "Fanta"];
 
 type BookingState = {
   movieTitle?: string;
@@ -14,16 +16,7 @@ type BookingState = {
   cinema?: string;
   seats?: string[];
   totalPrice?: number;
-};
-
-type ProductItem = {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image: string;
-  category: "combo" | "single";
-  hasDrinkChoice?: boolean;
+  showtimeId?: string;
 };
 
 type SnackLine = {
@@ -33,65 +26,34 @@ type SnackLine = {
   total: number;
 };
 
-const snackProducts: ProductItem[] = [
-  {
-    id: "combo-solo",
-    name: "Combo Solo",
-    description: "1 bắp + 1 nước",
-    price: 65000,
-    image: "/images/combo/combo1.png",
-    category: "combo",
-    hasDrinkChoice: true,
-  },
-  {
-    id: "combo-couple",
-    name: "Combo Couple",
-    description: "1 bắp lớn + 2 nước",
-    price: 120000,
-    image: "/images/combo/combo2.png",
-    category: "combo",
-    hasDrinkChoice: true,
-  },
-  {
-    id: "combo-family",
-    name: "Combo Family",
-    description: "2 bắp + 4 nước",
-    price: 220000,
-    image: "/images/combo/combo3.png",
-    category: "combo",
-    hasDrinkChoice: true,
-  },
-  {
-    id: "single-popcorn",
-    name: "1 Bắp",
-    description: "1 bắp vị truyền thống",
-    price: 45000,
-    image: "/images/combo/popcorn.png",
-    category: "single",
-    hasDrinkChoice: true,
-  },
-  {
-    id: "single-drink",
-    name: "1 Nước",
-    description: "Chọn Pepsi, Nước suối hoặc Fanta",
-    price: 30000,
-    image: "/images/combo/drink.png",
-    category: "single",
-    hasDrinkChoice: true,
-  },
-];
-
-const drinkOptions = ["Pepsi", "Nước suối", "Fanta"];
-
 export default function SnacksPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const bookingInfo = (location.state as BookingState) || {};
 
+  const [snacks, setSnacks] = useState<Snack[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [drinkChoiceMap, setDrinkChoiceMap] = useState<Record<string, string>>(
     {}
   );
+
+  useEffect(() => {
+    const loadSnacks = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getSnacks();
+        setSnacks(data);
+      } catch (err) {
+        console.error("Error loading snacks:", err);
+        setSnacks([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSnacks();
+  }, []);
 
   const handleQuantityChange = (id: string, type: "increase" | "decrease") => {
     setQuantities((prev) => {
@@ -107,30 +69,23 @@ export default function SnacksPage() {
   };
 
   const snackTotal = useMemo(() => {
-    return snackProducts.reduce((sum, item) => {
-      const qty = quantities[item.id] || 0;
+    return snacks.reduce((sum, item) => {
+      const qty = quantities[item._id] || 0;
       return sum + qty * item.price;
     }, 0);
-  }, [quantities]);
+  }, [snacks, quantities]);
 
   const finalTotal = (bookingInfo.totalPrice || 0) + snackTotal;
 
   const selectedSnackLines = useMemo<SnackLine[]>(() => {
-    return snackProducts
-      .filter((item) => (quantities[item.id] || 0) > 0)
+    return snacks
+      .filter((item) => (quantities[item._id] || 0) > 0)
       .map((item) => {
-        const qty = quantities[item.id] || 0;
+        const qty = quantities[item._id] || 0;
         const total = qty * item.price;
-        let name = item.name;
-
-        if (item.hasDrinkChoice) {
-          const selectedDrink = drinkChoiceMap[item.id] || drinkOptions[0];
-          name = `${item.name} (${selectedDrink})`;
-        }
-
-        return { id: item.id, name, qty, total };
+        return { id: item._id, name: item.name, qty, total };
       });
-  }, [quantities, drinkChoiceMap]);
+  }, [snacks, quantities]);
 
   const handleContinue = () => {
     navigate("/payment", {
@@ -142,6 +97,7 @@ export default function SnacksPage() {
         finalTotal,
         drinkChoiceMap,
         qrImage,
+        showtimeId: bookingInfo.showtimeId,
       },
     });
   };
@@ -157,64 +113,51 @@ export default function SnacksPage() {
 
         <div className="snacks-layout">
           <div className="snacks-left">
-            {snackProducts.map((item) => {
-              const qty = quantities[item.id] || 0;
-              const selectedDrink = drinkChoiceMap[item.id] || drinkOptions[0];
+            {isLoading ? (
+              <p>Đang tải bắp nước...</p>
+            ) : snacks.length === 0 ? (
+              <p>Không có bắp nước nào</p>
+            ) : (
+              snacks.map((item) => {
+                const qty = quantities[item._id] || 0;
 
-              return (
-                <div className="snack-card" key={item.id}>
-                  <div className="snack-image-wrap">
-                    <img src={item.image} alt={item.name} />
-                  </div>
-
-                  <div className="snack-content">
-                    <div className="snack-text">
-                      <h3>{item.name}</h3>
-                      <p>{item.description}</p>
-                      <strong>{item.price.toLocaleString("vi-VN")} đ</strong>
-
-                      {item.hasDrinkChoice && (
-                        <div className="drink-choice">
-                          <label>Chọn nước</label>
-                          <select
-                            value={selectedDrink}
-                            onChange={(e) =>
-                              handleDrinkChange(item.id, e.target.value)
-                            }
-                          >
-                            {drinkOptions.map((drink) => (
-                              <option key={drink} value={drink}>
-                                {drink}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
+                return (
+                  <div className="snack-card" key={item._id}>
+                    <div className="snack-image-wrap">
+                      <img src={item.image} alt={item.name} />
                     </div>
 
-                    <div className="qty-control">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleQuantityChange(item.id, "decrease")
-                        }
-                      >
-                        -
-                      </button>
-                      <span>{qty}</span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleQuantityChange(item.id, "increase")
-                        }
-                      >
-                        +
-                      </button>
+                    <div className="snack-content">
+                      <div className="snack-text">
+                        <h3>{item.name}</h3>
+                        <p>{item.description}</p>
+                        <strong>{item.price.toLocaleString("vi-VN")} đ</strong>
+                      </div>
+
+                      <div className="qty-control">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleQuantityChange(item._id, "decrease")
+                          }
+                        >
+                          -
+                        </button>
+                        <span>{qty}</span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleQuantityChange(item._id, "increase")
+                          }
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
 
           <aside className="snacks-right">

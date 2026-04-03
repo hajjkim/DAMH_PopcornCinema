@@ -2,7 +2,8 @@ import { FormEvent, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import "../../styles/LoginPage.css";
 import logo from "../../assets/images/logo/logo.png";
-import { users } from "../../data/users";
+import { loginApi } from "../../services/auth.api";
+import { saveAuth } from "../../utils/auth";
 
 type LoginForm = {
   email: string;
@@ -18,42 +19,51 @@ export default function LoginPage() {
   });
 
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setError("");
 
     if (!form.email || !form.password) {
       setError("❌ Vui lòng nhập đầy đủ thông tin");
       return;
     }
 
-    const user = users.find(
-      (u) => u.email === form.email && u.password === form.password
-    );
+    try {
+      setLoading(true);
 
-    if (!user) {
-      setError("❌ Sai email hoặc mật khẩu");
-      return;
-    }
+      const data = await loginApi(form.email, form.password);
 
-    localStorage.setItem("currentUser", JSON.stringify(user));
+      saveAuth(data.token, {
+        _id: data.user._id,
+        fullName: data.user.fullName,
+        email: data.user.email,
+        phone: data.user.phone,
+        avatar: data.user.avatar,
+        role: data.user.role,
+        status: data.user.status,
+      });
 
-    if (user.role === "ADMIN") {
-      navigate("/admin/dashboard");
-    } else {
-      navigate("/");
+      if (data.user.role === "ADMIN") {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/");
+      }
+    } catch (err: any) {
+      setError(err.message || "❌ Sai email hoặc mật khẩu");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="login-page">
       <div className="login-container">
-
-        {/* LEFT */}
         <div className="login-left">
           <div className="login-overlay"></div>
 
@@ -69,15 +79,12 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* RIGHT */}
         <div className="login-right">
           <div className="login-card">
-
             <h2>Đăng nhập</h2>
             <p className="login-sub">Chào mừng bạn quay lại 👋</p>
 
             <form onSubmit={handleSubmit} className="login-form">
-
               <div className="input-group">
                 <label>Email</label>
                 <input
@@ -100,27 +107,19 @@ export default function LoginPage() {
                 />
               </div>
 
-              {/* 🔐 QUÊN MẬT KHẨU */}
-              <div className="login-extra">
-                <Link to="/auth/forgot-password" className="forgot-link">
-                  Quên mật khẩu?
-                </Link>
-              </div>
-
               {error && <p className="login-error">{error}</p>}
 
-              <button className="login-btn">Đăng nhập</button>
+              <button className="login-btn" disabled={loading}>
+                {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+              </button>
 
-              {/* 🔗 REGISTER */}
               <p className="login-footer">
                 Chưa có tài khoản?{" "}
                 <Link to="/auth/register" className="register-link">
                   Đăng ký
                 </Link>
               </p>
-
             </form>
-
           </div>
         </div>
       </div>

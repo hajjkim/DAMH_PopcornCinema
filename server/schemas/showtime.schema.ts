@@ -1,27 +1,21 @@
-import { Schema, model } from "mongoose";
 
-const showtimeSchema = new Schema(
-  {
-    movieId: {
-      type: Schema.Types.ObjectId,
-      ref: "Movie",
-      required: true,
-    },
-    auditoriumId: {
-      type: Schema.Types.ObjectId,
-      ref: "Auditorium",
-      required: true,
-    },
-    startTime: { type: Date, required: true },
-    endTime: { type: Date, required: true },
-    basePrice: { type: Number, required: true },
-    status: {
-      type: String,
-      enum: ["OPEN", "CLOSED", "CANCELLED"],
-      default: "OPEN",
-    },
-  },
-  { timestamps: true }
-);
+import mongoose, { Document, Schema } from "mongoose";
 
-export const Showtime = model("Showtime", showtimeSchema);
+export interface IShowtime {
+  movieId: string;
+  cinema: string;
+  date: string;
+  time: string;
+  seatLayout: string[];
+}
+export interface IShowtimeDocument extends IShowtime, Document {}
+
+const showtimeSchema = new Schema<IShowtimeDocument>({
+  movieId: { type: String, required: true },
+  cinema: { type: String, required: true },
+  date: { type: String, required: true },
+  time: { type: String, required: true },
+  seatLayout: { type: [String], required: true },
+}, { timestamps: true });
+
+export const Showtime = mongoose.models.Showtime || mongoose.model<IShowtimeDocument>("Showtime", showtimeSchema);

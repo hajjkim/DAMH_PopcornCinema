@@ -1,35 +1,87 @@
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import { User } from "../schemas/user.schema";
+import { IUserDocument, User } from "../schemas/user.schema";
+import { comparePassword, hashPassword } from "../utils/hash";
+import { signAccessToken } from "../utils/jwt";
 
-// Đăng ký người dùng mới
-export const register = async (fullName: string, email: string, password: string) => {
-    // Mã hóa mật khẩu
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    // Tạo user mới
-    const newUser = new User({ fullName, email, passwordHash: hashedPassword });
-    
-    // Lưu vào database
-    await newUser.save();
-    
-    // Trả về user đã lưu
-    return newUser;
+export interface RegisterInput {
+  fullName: string;
+  email: string;
+  password: string;
+}
+
+export interface LoginInput {
+  email: string;
+  password: string;
+}
+
+const sanitizeUser = (user: IUserDocument) => ({
+  _id: user._id,
+  fullName: user.fullName,
+  email: user.email,
+  phone: user.phone,
+  avatar: user.avatar,
+  role: user.role,
+  status: user.status,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
+});
+
+export const register = async ({
+  fullName,
+  email,
+  password,
+}: RegisterInput) => {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const existingUser = await User.findOne({ email: normalizedEmail });
+  if (existingUser) {
+    throw new Error("Email already exists");
+  }
+
+  const passwordHash = await hashPassword(password);
+
+  const newUser = await User.create({
+    fullName: fullName.trim(),
+    email: normalizedEmail,
+    passwordHash,
+    role: "CUSTOMER",
+    status: "ACTIVE",
+  });
+
+  const token = signAccessToken({
+    userId: newUser.id,
+    role: newUser.role,
+  });
+
+  return {
+    token,
+    user: sanitizeUser(newUser),
+  };
 };
 
-// Đăng nhập
-export const login = async (email: string, password: string) => {
-    // Kiểm tra email
-    const user = await User.findOne({ email });
-    if (!user) throw new Error("User not found");
+export const login = async ({ email, password }: LoginInput) => {
+  const normalizedEmail = email.trim().toLowerCase();
 
-    // Kiểm tra mật khẩu
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch) throw new Error("Invalid credentials");
+  const user = await User.findOne({ email: normalizedEmail });
+  if (!user) {
+    throw new Error("Invalid email or password");
+  }
 
-    // Tạo JWT token
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET as string, { expiresIn: "1h" });
+  if (user.status !== "ACTIVE") {
+    throw new Error("User account is inactive");
+  }
 
-    // Trả về token và user
-    return { token, user };
+  const isMatch = await comparePassword(password, user.passwordHash);
+  if (!isMatch) {
+    throw new Error("Invalid email or password");
+  }
+
+  const token = signAccessToken({
+    userId: user.id,
+    role: user.role,
+  });
+
+  return {
+    token,
+    user: sanitizeUser(user),
+  };
 };

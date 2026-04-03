@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../../styles/PaymentPage.css";
+import {
+  createBooking,
+  getMyBookings,
+  type PaymentMeta,
+} from "../../services/booking.api";
+import { getPaymentConfig, type PaymentConfig } from "../../services/payment.api";
+import { getPromotions, type Promotion } from "../../services/promotion.api";
+import { getShowtimeById } from "../../services/showtime.api";
+import { getMovieById, type Movie } from "../../services/movie.api";
 
 type SnackLine = {
   id: string;
@@ -23,6 +32,7 @@ type PaymentState = {
   snackTotal?: number;
   finalTotal?: number;
   qrImage?: string;
+  showtimeId?: string;
 };
 
 type InvoiceStatus =
@@ -65,27 +75,6 @@ const BANK_INFO = {
   accountName: "POPCORN CINEMA",
 };
 
-const AVAILABLE_PROMOS: PromoItem[] = [
-  {
-    code: "GIAM10",
-    label: "GIAM10 - Giảm 10%",
-    type: "percent",
-    value: 10,
-  },
-  {
-    code: "GIAM20K",
-    label: "GIAM20K - Giảm 20.000đ",
-    type: "amount",
-    value: 20000,
-  },
-  {
-    code: "GIAM50K",
-    label: "GIAM50K - Giảm 50.000đ",
-    type: "amount",
-    value: 50000,
-  },
-];
-
 function generateOrderCode() {
   return `PC${Date.now().toString().slice(-8)}`;
 }
@@ -110,16 +99,24 @@ export default function PaymentPage() {
   const navigate = useNavigate();
   const paymentInfo = (location.state as PaymentState) || {};
 
-  const [orderCode] = useState<string>(generateOrderCode());
+  const [orderCode, setOrderCode] = useState<string>(generateOrderCode());
+  const [isLoading, setIsLoading] = useState(false);
   const [invoiceStatus, setInvoiceStatus] = useState<InvoiceStatus>("unpaid");
   const [timeLeft, setTimeLeft] = useState(180);
 
   const [selectedPromoCode, setSelectedPromoCode] = useState<string>("");
   const [appliedPromo, setAppliedPromo] = useState<PromoItem | null>(null);
   const [promoMessage, setPromoMessage] = useState<string>("");
+  const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [showtimeMeta, setShowtimeMeta] = useState<{ date?: string; time?: string; cinema?: string; movieId?: string }>({});
+  const [movieMeta, setMovieMeta] = useState<Movie | null>(null);
+  const [bookingId, setBookingId] = useState<string | null>(null);
+  const [confirmedBooking, setConfirmedBooking] = useState<any>(null);
 
   const snackLines = paymentInfo.snackLines || [];
   const seats = paymentInfo.seats || [];
+  const roomLabel = paymentInfo.room || showtimeMeta.room || "Phòng 1";
 
   const originalTotal = useMemo(() => {
     return paymentInfo.finalTotal || 0;
@@ -140,6 +137,37 @@ export default function PaymentPage() {
     return totalAfterDiscount > 0 ? totalAfterDiscount : 0;
   }, [originalTotal, discountAmount]);
 
+  // Load payment config (QR/bank) from BE
+  useEffect(() => {
+    getPaymentConfig()
+      .then((cfg) => setPaymentConfig(cfg))
+      .catch((err) => console.error("Error loading payment config:", err));
+  }, []);
+
+  // Load promotions from BE
+  useEffect(() => {
+    getPromotions()
+      .then((data) => setPromotions(data))
+      .catch((err) => console.error("Error loading promotions:", err));
+  }, []);
+
+  // Load showtime/movie info for display
+  useEffect(() => {
+    if (!paymentInfo.showtimeId) return;
+    (async () => {
+      try {
+        const st = await getShowtimeById(paymentInfo.showtimeId);
+        setShowtimeMeta({ ...(st as any), room: (st as any).cinema });
+        if ((st as any).movieId) {
+          const mv = await getMovieById((st as any).movieId);
+          setMovieMeta(mv);
+        }
+      } catch (err) {
+        console.error("Error loading showtime/movie:", err);
+      }
+    })();
+  }, [paymentInfo.showtimeId]);
+
   useEffect(() => {
     if (invoiceStatus !== "unpaid") return;
 
@@ -148,6 +176,7 @@ export default function PaymentPage() {
         if (prev <= 1) {
           clearInterval(timer);
           setInvoiceStatus("failed");
+          setPromoMessage("Hết thời gian thanh toán. Vui lòng thực hiện lại.");
           return 0;
         }
         return prev - 1;
@@ -164,8 +193,9 @@ export default function PaymentPage() {
       return;
     }
 
-    const foundPromo = AVAILABLE_PROMOS.find(
-      (item) => item.code === selectedPromoCode
+    const code = selectedPromoCode.trim().toUpperCase();
+    const foundPromo = promotions.find(
+      (item) => item.code.toUpperCase() === code
     );
 
     if (!foundPromo) {
@@ -174,7 +204,23 @@ export default function PaymentPage() {
       return;
     }
 
-    setAppliedPromo(foundPromo);
+    // normalize discount string, e.g. "30%" hoặc "20000"
+    let type: "percent" | "amount" = "amount";
+    let value = 0;
+    const discountText = (foundPromo as any).discount?.toString().trim() || "";
+    if (discountText.endsWith("%")) {
+      type = "percent";
+      value = Number(discountText.replace("%", "")) || 0;
+    } else {
+      value = Number(discountText) || 0;
+    }
+
+    setAppliedPromo({
+      code: foundPromo.code,
+      label: (foundPromo as any).title || foundPromo.code,
+      type,
+      value,
+    });
     setPromoMessage(`Áp dụng thành công mã ${foundPromo.code}.`);
   };
 
@@ -184,33 +230,107 @@ export default function PaymentPage() {
     setPromoMessage("");
   };
 
-  const handlePaid = () => {
-    const invoice: InvoiceItem = {
-      id: orderCode,
-      createdAt: new Date().toISOString(),
-      movieTitle: paymentInfo.movieTitle || "Chưa có tên phim",
-      cinema: paymentInfo.cinema || "Chưa có rạp",
-      date: paymentInfo.date || "",
-      time: paymentInfo.time || "",
-      room: paymentInfo.room || "",
-      format: paymentInfo.format || "",
-      seats,
-      ticketTotal: paymentInfo.totalPrice || 0,
-      snackLines,
-      snackTotal: paymentInfo.snackTotal || 0,
-      finalTotal,
-      status: "pending_confirmation",
-      paymentMethod: "bank_transfer_qr",
-      qrImage: paymentInfo.qrImage,
-      promoCode: appliedPromo?.code || "",
-      discountAmount,
-    };
+  const handlePaid = async () => {
+    if (!paymentInfo.showtimeId) {
+      setPromoMessage("Lỗi: Không tìm thấy showtime ID");
+      return;
+    }
 
-    const oldInvoices = JSON.parse(localStorage.getItem("invoices") || "[]");
-    localStorage.setItem("invoices", JSON.stringify([invoice, ...oldInvoices]));
+    setIsLoading(true);
+    try {
+      // Gọi API tạo đặt vé
+      const snacksData = snackLines.map((line) => ({
+        snackId: line.id,
+        qty: line.qty,
+      }));
 
-    setInvoiceStatus("pending_confirmation");
+      const result = await createBooking({
+        showtimeId: paymentInfo.showtimeId,
+        seats: seats,
+        snacks: snacksData,
+        promotionCode: appliedPromo?.code,
+        ticketTotal: paymentInfo.totalPrice || 0,
+        snackTotal: paymentInfo.snackTotal || 0,
+        finalTotal: finalTotal,
+      });
+
+      const { booking, payment } = result;
+      console.log("Booking created successfully:", booking);
+      setBookingId(booking._id);
+      // Đồng bộ nội dung chuyển khoản/order code từ BE
+      if (payment?.orderCode) {
+        setOrderCode(payment.orderCode);
+      }
+      if (payment?.qrImageUrl && !paymentInfo.qrImage) {
+        paymentInfo.qrImage = payment.qrImageUrl;
+      }
+
+      // Lưu vào localStorage (optional, cho tracking)
+      const invoice: InvoiceItem = {
+        id: booking._id,
+        createdAt: booking.createdAt,
+        movieTitle:
+          movieMeta?.title || paymentInfo.movieTitle || "Chưa có tên phim",
+        cinema: showtimeMeta.cinema || paymentInfo.cinema || "Chưa có rạp",
+        date: showtimeMeta.date || paymentInfo.date || "",
+        time: showtimeMeta.time || paymentInfo.time || "",
+        room: roomLabel,
+        format: paymentInfo.format || "",
+        seats,
+        ticketTotal: paymentInfo.totalPrice || 0,
+        snackLines,
+        snackTotal: paymentInfo.snackTotal || 0,
+        finalTotal,
+        status: "pending_confirmation",
+        paymentMethod: "bank_transfer_qr",
+        qrImage: paymentConfig?.qrImage || paymentInfo.qrImage,
+        promoCode: appliedPromo?.code || "",
+        discountAmount,
+      };
+
+      const oldInvoices = JSON.parse(localStorage.getItem("invoices") || "[]");
+      localStorage.setItem("invoices", JSON.stringify([invoice, ...oldInvoices]));
+
+      setInvoiceStatus("pending_confirmation");
+      setPromoMessage("Đặt vé thành công! Vui lòng chuyển khoản để hoàn tất.");
+
+      // Nếu đã thanh toán (confirmed ngay), điều hướng sang trang vé
+      if (booking.status === "confirmed") {
+        navigate("/ticket", { state: { bookingId: booking._id } });
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Có lỗi xảy ra";
+      setPromoMessage(`Lỗi: ${errorMessage}`);
+      setInvoiceStatus("unpaid");
+      console.error("Booking error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  // Poll booking status until confirmed
+  useEffect(() => {
+    if (!bookingId || invoiceStatus !== "pending_confirmation") return;
+    const interval = setInterval(async () => {
+      try {
+        const myBookings = await getMyBookings();
+        const found = myBookings.find((b) => b._id === bookingId);
+        if (found) {
+          setConfirmedBooking(found);
+          if (found.status === "confirmed") {
+            setInvoiceStatus("confirmed");
+            navigate("/ticket", { state: { bookingId: found._id } });
+          } else if (found.status === "pending_confirmation") {
+            setInvoiceStatus("pending_confirmation");
+          }
+        }
+      } catch (err) {
+        console.error("Error polling booking status:", err);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [bookingId, invoiceStatus]);
 
   const formatTime = (sec: number) => {
     const m = Math.floor(sec / 60);
@@ -222,6 +342,20 @@ export default function PaymentPage() {
     timeLeft <= 30 && invoiceStatus === "unpaid"
       ? "countdown flash"
       : "countdown";
+
+  if (invoiceStatus === "failed") {
+    return (
+      <div className="payment-page failed">
+        <div className="payment-failed-card">
+          <h2>Thanh toán thất bại</h2>
+          <p>Đơn của bạn đã hết thời gian thanh toán (3 phút).</p>
+          <button className="primary-btn" onClick={() => navigate("/")}>
+            Quay về trang chủ
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="payment-page">
@@ -242,6 +376,10 @@ export default function PaymentPage() {
             </p>
           )}
 
+          {invoiceStatus === "pending_confirmation" && (
+            <p className="payment-pending">Đang chờ hệ thống xác nhận...</p>
+          )}
+
           {invoiceStatus === "failed" && (
             <p className="payment-failed">Thanh toán thất bại!</p>
           )}
@@ -255,12 +393,12 @@ export default function PaymentPage() {
               <h2>Quét mã QR chuyển khoản</h2>
 
               <div className="qr-box">
-                {paymentInfo.qrImage ? (
-                  <img
-                    src={paymentInfo.qrImage}
-                    alt="QR thanh toán"
-                    className="payment-qr-image"
-                  />
+    {paymentConfig?.qrImage || paymentInfo.qrImage ? (
+      <img
+        src={paymentConfig?.qrImage || paymentInfo.qrImage || ""}
+        alt="QR thanh toán"
+        className="payment-qr-image"
+      />
                 ) : (
                   <div className="qr-placeholder">Chưa có ảnh QR</div>
                 )}
@@ -269,15 +407,15 @@ export default function PaymentPage() {
               <div className="bank-info">
                 <div className="bank-line">
                   <span>Ngân hàng</span>
-                  <strong>{BANK_INFO.bankName}</strong>
+                  <strong>{paymentConfig?.bankName || BANK_INFO.bankName}</strong>
                 </div>
                 <div className="bank-line">
                   <span>Số tài khoản</span>
-                  <strong>{BANK_INFO.accountNumber}</strong>
+                  <strong>{paymentConfig?.accountNumber || BANK_INFO.accountNumber}</strong>
                 </div>
                 <div className="bank-line">
                   <span>Chủ tài khoản</span>
-                  <strong>{BANK_INFO.accountName}</strong>
+                  <strong>{paymentConfig?.accountName || BANK_INFO.accountName}</strong>
                 </div>
                 <div className="bank-line">
                   <span>Nội dung</span>
@@ -299,9 +437,9 @@ export default function PaymentPage() {
                     disabled={invoiceStatus !== "unpaid"}
                   >
                     <option value="">-- Chọn mã giảm giá --</option>
-                    {AVAILABLE_PROMOS.map((promo) => (
-                      <option key={promo.code} value={promo.code}>
-                        {promo.label}
+                    {promotions.map((promo, idx) => (
+                      <option key={promo._id || idx} value={promo.code}>
+                        {promo.code} - {(promo as any).title || promo.description || "Khuyến mãi"}
                       </option>
                     ))}
                   </select>
@@ -343,10 +481,14 @@ export default function PaymentPage() {
                   type="button"
                   className="paid-btn"
                   onClick={handlePaid}
-                  disabled={invoiceStatus !== "unpaid"}
+                  disabled={invoiceStatus !== "unpaid" || isLoading}
                 >
-                  {invoiceStatus === "pending_confirmation"
-                    ? "Đã ghi nhận thanh toán"
+                  {isLoading
+                    ? "Đang xử lý..."
+                    : invoiceStatus === "pending_confirmation"
+                    ? "Đã ghi nhận, chờ xác nhận..."
+                    : invoiceStatus === "confirmed"
+                    ? "Đã xác nhận"
                     : "Đã thanh toán"}
                 </button>
 
@@ -371,14 +513,12 @@ export default function PaymentPage() {
                 />
 
                 <div className="summary-info">
-                  <h3>{paymentInfo.movieTitle || "Chưa có tên phim"}</h3>
-                  <p>{paymentInfo.cinema || "Chưa có rạp"}</p>
+                  <h3>{movieMeta?.title || paymentInfo.movieTitle || "Chưa có tên phim"}</h3>
+                  <p>{paymentInfo.cinema || showtimeMeta.cinema || "Chưa có rạp"}</p>
                   <p>
-                    {paymentInfo.time || "--:--"} - {paymentInfo.date || "--/--/----"}
+                    {showtimeMeta.time || paymentInfo.time || "--:--"} - {showtimeMeta.date || paymentInfo.date || "--/--/----"}
                   </p>
-                  <p>
-                    {paymentInfo.room || "Phòng ?"} - {paymentInfo.format || "2D"}
-                  </p>
+                  <p>{roomLabel} - {paymentInfo.format || "2D"}</p>
                   <p>Ghế: {seats.length > 0 ? seats.join(", ") : "Chưa có"}</p>
                 </div>
               </div>
@@ -436,7 +576,7 @@ export default function PaymentPage() {
               )}
 
               <div className="summary-bottom-link">
-                <Link to="/movie">Quay về trang phim</Link>
+                <Link to="/movies">Quay về trang phim</Link>
               </div>
             </div>
           </aside>

@@ -1,172 +1,290 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../../styles/ProfilePage.css";
-
-type User = {
-  id: string;
-  fullName: string;
-  email: string;
-  role: "USER" | "ADMIN";
-  avatar?: string;
-};
-
-type SnackLine = { id: string; name: string; qty: number; total: number };
-
-type Invoice = {
-  id: string;
-  movieTitle: string;
-  cinema: string;
-  date: string;
-  time: string;
-  seats: string[];
-  ticketTotal: number;
-  snackLines: SnackLine[];
-  finalTotal: number;
-  status: "unpaid" | "pending_confirmation" | "confirmed" | "failed";
-};
-
-type Promo = {
-  id: string;
-  title: string;
-  discount: string;
-};
+import { getMyProfile, updateMyProfile, type User } from "../../services/auth.api";
+import { getCurrentUser, isAuthenticated, setCurrentUser } from "../../utils/auth";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
 
-  // Lấy user từ localStorage
-  const storedUser = localStorage.getItem("currentUser");
-  const user: User | null = storedUser ? JSON.parse(storedUser) : null;
+  const [profile, setProfile] = useState<User | null>(null);
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [avatar, setAvatar] = useState("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  if (!user) {
-    navigate("/auth/login");
-    return null;
-  }
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      navigate("/login");
+      return;
+    }
 
-  const handleLogout = () => {
-    localStorage.removeItem("currentUser");
-    navigate("/");
+    const localUser = getCurrentUser();
+    if (localUser) {
+      setFullName(localUser.fullName || "");
+      setPhone(localUser.phone || "");
+      setAvatar(localUser.avatar || "");
+    }
+
+    const loadProfile = async () => {
+      try {
+        const data = await getMyProfile();
+        setProfile(data);
+        setFullName(data.fullName || "");
+        setPhone(data.phone || "");
+        setAvatar(data.avatar || "");
+      } catch (err: any) {
+        setError(err.message || "Không tải được hồ sơ");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!avatarFile) {
+      setPreviewUrl("");
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(avatarFile);
+    setPreviewUrl(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [avatarFile]);
+
+  const displayAvatar = useMemo(() => {
+    return previewUrl || avatar || "https://via.placeholder.com/160?text=Avatar";
+  }, [previewUrl, avatar]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setAvatarFile(file);
   };
 
-  // Lịch sử mua vé
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [invoiceFilter, setInvoiceFilter] = useState("");
-  useEffect(() => {
-    const data = JSON.parse(localStorage.getItem("invoices") || "[]");
-    setInvoices(data);
-  }, []);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setSaving(true);
 
-  // Khuyến mãi đã lưu
-  const [savedPromos, setSavedPromos] = useState<Promo[]>([]);
-  const [promoFilter, setPromoFilter] = useState("");
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("savedPromos") || "[]");
-    setSavedPromos(saved);
-  }, []);
+    try {
+      const updatedUser = await updateMyProfile({
+        fullName,
+        phone,
+        avatar,
+        avatarFile,
+      });
 
-  const filteredInvoices = invoices.filter((inv) =>
-    inv.movieTitle.toLowerCase().includes(invoiceFilter.toLowerCase())
-  );
+      setProfile(updatedUser);
+      setFullName(updatedUser.fullName || "");
+      setPhone(updatedUser.phone || "");
+      setAvatar(updatedUser.avatar || "");
+      setAvatarFile(null);
+      setCurrentUser(updatedUser);
+      setSuccess("Cập nhật hồ sơ thành công");
+    } catch (err: any) {
+      setError(err.message || "Cập nhật hồ sơ thất bại");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  const filteredPromos = savedPromos.filter((p) =>
-    p.title.toLowerCase().includes(promoFilter.toLowerCase())
-  );
+  if (loading) {
+    return (
+      <div style={{ maxWidth: "900px", margin: "40px auto", padding: "24px" }}>
+        Đang tải...
+      </div>
+    );
+  }
 
   return (
-    <div className="profile-page">
-      <div className="profile-container">
-        <h1>Thông tin cá nhân</h1>
+    <div
+      style={{
+        maxWidth: "900px",
+        margin: "40px auto",
+        padding: "24px",
+        backgroundColor: "#ffffff",
+        borderRadius: "16px",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+      }}
+    >
+      <h1
+        style={{
+          fontSize: "36px",
+          fontWeight: 700,
+          marginBottom: "24px",
+          color: "#0f172a",
+        }}
+      >
+        Hồ sơ cá nhân
+      </h1>
 
-        <div className="profile-card">
-          <div className="profile-avatar">
-            <img
-              src={user.avatar || "/images/avatar/default-avatar.png"}
-              alt={user.fullName}
-            />
-          </div>
-
-          <div className="profile-info">
-            <p>
-              <strong>Họ và tên:</strong> {user.fullName}
-            </p>
-            <p>
-              <strong>Email:</strong> {user.email}
-            </p>
-            <p>
-              <strong>Vai trò:</strong> {user.role === "ADMIN" ? "Quản trị" : "Người dùng"}
-            </p>
-
-            <button className="btn-logout" onClick={handleLogout}>
-              Đăng xuất
-            </button>
-          </div>
-        </div>
-
-        {/* Lịch sử mua vé */}
-        <div className="profile-section">
-          <h2>Lịch sử mua vé</h2>
-          <input
-            type="text"
-            placeholder="Tìm phim..."
-            value={invoiceFilter}
-            onChange={(e) => setInvoiceFilter(e.target.value)}
-            className="profile-search-input"
-          />
-          {filteredInvoices.length === 0 ? (
-            <p>Không có vé phù hợp.</p>
-          ) : (
-            <table className="invoice-table">
-              <thead>
-                <tr>
-                  <th>Phim</th>
-                  <th>Rạp</th>
-                  <th>Ngày - Giờ</th>
-                  <th>Ghế</th>
-                  <th>Tổng tiền</th>
-                  <th>Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredInvoices.map((inv) => (
-                  <tr key={inv.id}>
-                    <td>{inv.movieTitle}</td>
-                    <td>{inv.cinema}</td>
-                    <td>
-                      {inv.date} - {inv.time}
-                    </td>
-                    <td>{inv.seats.join(", ")}</td>
-                    <td>{inv.finalTotal.toLocaleString("vi-VN")} đ</td>
-                    <td>{inv.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        {/* Khuyến mãi đã lưu */}
-        <div className="profile-section">
-          <h2>Khuyến mãi đã lưu</h2>
-          <input
-            type="text"
-            placeholder="Tìm khuyến mãi..."
-            value={promoFilter}
-            onChange={(e) => setPromoFilter(e.target.value)}
-            className="profile-search-input"
-          />
-          {filteredPromos.length === 0 ? (
-            <p>Không có khuyến mãi phù hợp.</p>
-          ) : (
-            <ul className="promo-list">
-              {filteredPromos.map((promo) => (
-                <li key={promo.id}>
-                  {promo.title} - {promo.discount}
-                </li>
-              ))}
-            </ul>
-          )}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "20px",
+          marginBottom: "24px",
+          flexWrap: "wrap",
+        }}
+      >
+        <img
+          src={displayAvatar}
+          alt="Avatar"
+          style={{
+            width: "110px",
+            height: "110px",
+            borderRadius: "999px",
+            objectFit: "cover",
+            border: "1px solid #cbd5e1",
+          }}
+        />
+        <div>
+          <p style={{ fontWeight: 700, marginBottom: "6px", color: "#0f172a" }}>
+            {profile?.email}
+          </p>
+          <p style={{ color: "#64748b" }}>{profile?.role || "CUSTOMER"}</p>
         </div>
       </div>
+
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: "16px" }}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "8px",
+              fontWeight: 600,
+              color: "#334155",
+            }}
+          >
+            Họ và tên
+          </label>
+          <input
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "12px",
+              border: "1px solid #cbd5e1",
+              borderRadius: "10px",
+              fontSize: "16px",
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "16px" }}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "8px",
+              fontWeight: 600,
+              color: "#334155",
+            }}
+          >
+            Số điện thoại
+          </label>
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "12px",
+              border: "1px solid #cbd5e1",
+              borderRadius: "10px",
+              fontSize: "16px",
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "16px" }}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "8px",
+              fontWeight: 600,
+              color: "#334155",
+            }}
+          >
+            Avatar URL
+          </label>
+          <input
+            value={avatar}
+            onChange={(e) => setAvatar(e.target.value)}
+            placeholder="https://example.com/avatar.jpg"
+            style={{
+              width: "100%",
+              padding: "12px",
+              border: "1px solid #cbd5e1",
+              borderRadius: "10px",
+              fontSize: "16px",
+              boxSizing: "border-box",
+            }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "16px" }}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "8px",
+              fontWeight: 600,
+              color: "#334155",
+            }}
+          >
+            Upload ảnh đại diện
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            style={{
+              width: "100%",
+              padding: "10px",
+              border: "1px solid #cbd5e1",
+              borderRadius: "10px",
+              boxSizing: "border-box",
+            }}
+          />
+          <p style={{ marginTop: "8px", color: "#64748b", fontSize: "14px" }}>
+            Nếu chọn file, hệ thống sẽ ưu tiên upload file thay vì Avatar URL.
+          </p>
+        </div>
+
+        {error ? (
+          <p style={{ color: "#dc2626", marginBottom: "16px" }}>{error}</p>
+        ) : null}
+
+        {success ? (
+          <p style={{ color: "#16a34a", marginBottom: "16px" }}>{success}</p>
+        ) : null}
+
+        <button
+          type="submit"
+          disabled={saving}
+          style={{
+            padding: "12px 18px",
+            borderRadius: "10px",
+            border: "none",
+            backgroundColor: "#111827",
+            color: "#fff",
+            fontSize: "16px",
+            fontWeight: 600,
+            cursor: "pointer",
+            opacity: saving ? 0.7 : 1,
+          }}
+        >
+          {saving ? "Đang lưu..." : "Lưu thay đổi"}
+        </button>
+      </form>
     </div>
   );
 }

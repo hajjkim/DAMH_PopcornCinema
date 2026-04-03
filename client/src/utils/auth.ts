@@ -1,23 +1,45 @@
-import { users } from "../data/users";
-
-export const login = (email: string, password: string) => {
-  const user = users.find(
-    (u) => u.email === email && u.password === password
-  );
-
-  if (user) {
-    localStorage.setItem("currentUser", JSON.stringify(user));
-    return user;
-  }
-
-  return null;
+export type CurrentUser = {
+  _id?: string;
+  id?: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  avatar?: string;
+  role?: string;
+  status?: string;
 };
 
-export const getCurrentUser = () => {
-  const data = localStorage.getItem("currentUser");
-  return data ? JSON.parse(data) : null;
+const TOKEN_KEY = "token";
+const USER_KEY = "currentUser";
+
+export const getToken = (): string | null => localStorage.getItem(TOKEN_KEY);
+
+export const getCurrentUser = (): CurrentUser | null => {
+  const raw = localStorage.getItem(USER_KEY);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
+export const setCurrentUser = (user: CurrentUser) => {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  window.dispatchEvent(new Event("auth-changed"));
+};
+
+export const saveAuth = (token: string, user: CurrentUser) => {
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  window.dispatchEvent(new Event("auth-changed"));
 };
 
 export const logout = () => {
-  localStorage.removeItem("currentUser");
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+  window.dispatchEvent(new Event("auth-changed"));
 };
+
+export const isAuthenticated = (): boolean => !!getToken();

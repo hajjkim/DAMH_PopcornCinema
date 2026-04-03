@@ -1,33 +1,26 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import "../../styles/HomePage.css";
+import { getMovies, type Movie as ApiMovie } from "../../services/movie.api";
+import {
+  getPromotions,
+  type Promotion as ApiPromotion,
+} from "../../services/promotion.api";
 
-type Movie = {
+type HomeMovie = {
   _id: string;
   title: string;
   poster?: string;
   genre?: string;
+  status?: ApiMovie["status"];
 };
 
-type Promotion = {
+type HomePromotion = {
   _id: string;
   title: string;
-  image?: string;
   description?: string;
-};
-
-type HomePageProps = {
-  nowShowing?: Movie[];
-  comingSoon?: Movie[];
-  promotions?: Promotion[];
-};
-
-type MovieCardProps = {
-  movie: Movie;
-  isComingSoon?: boolean;
-};
-
-type PromotionCardProps = {
-  item: Promotion;
+  image?: string;
+  code?: string;
 };
 
 const banners: string[] = [
@@ -37,7 +30,7 @@ const banners: string[] = [
   "/images/banners/banner4.jpg",
 ];
 
-const demoNowShowing: Movie[] = [
+const demoNowShowing: HomeMovie[] = [
   {
     _id: "1",
     title: "Avengers: Secret Wars",
@@ -64,7 +57,7 @@ const demoNowShowing: Movie[] = [
   },
 ];
 
-const demoComingSoon: Movie[] = [
+const demoComingSoon: HomeMovie[] = [
   {
     _id: "5",
     title: "Frozen 3",
@@ -91,7 +84,7 @@ const demoComingSoon: Movie[] = [
   },
 ];
 
-const demoPromotions: Promotion[] = [
+const demoPromotions: HomePromotion[] = [
   {
     _id: "1",
     title: "Mua 1 tặng 1 vé thứ 4",
@@ -112,7 +105,14 @@ const demoPromotions: Promotion[] = [
   },
 ];
 
-import { Link } from "react-router-dom";
+type MovieCardProps = {
+  movie: HomeMovie;
+  isComingSoon?: boolean;
+};
+
+type PromotionCardProps = {
+  item: HomePromotion;
+};
 
 function MovieCard({ movie, isComingSoon = false }: MovieCardProps) {
   return (
@@ -129,25 +129,25 @@ function MovieCard({ movie, isComingSoon = false }: MovieCardProps) {
         <p>{movie.genre || "Đang cập nhật thể loại"}</p>
 
         <div className="movie-actions">
-        <Link
-          to={`/movies/${movie._id}`}
-          className="btn btn-small btn-outline"
-        >
-          Chi tiết
-        </Link>
-
-        {isComingSoon ? (
-          <button className="btn btn-small btn-disabled">
-            Sắp mở bán
-          </button>
-        ) : (
           <Link
-            to={`/booking/${movie._id}`}
-            className="btn btn-small btn-primary"
+            to={`/movies/${movie._id}`}
+            className="btn btn-small btn-outline"
           >
-            Đặt vé
+            Chi tiết
           </Link>
-        )}
+
+          {isComingSoon ? (
+            <button className="btn btn-small btn-disabled">
+              Sắp mở bán
+            </button>
+          ) : (
+            <Link
+              to={`/booking/${movie._id}`}
+              className="btn btn-small btn-primary"
+            >
+              Đặt vé
+            </Link>
+          )}
         </div>
       </div>
     </div>
@@ -155,26 +155,40 @@ function MovieCard({ movie, isComingSoon = false }: MovieCardProps) {
 }
 
 function PromotionCard({ item }: PromotionCardProps) {
+  const imageSrc = item.image || "/images/promotions/default.jpg";
+  const description =
+    item.description || "Ưu đãi hấp dẫn dành cho khách hàng.";
+
   return (
     <div className="promo-card">
-      <img
-        src={item.image || "/images/promotions/default.jpg"}
-        alt={item.title}
-      />
+      <img src={imageSrc} alt={item.title} />
 
       <div className="promo-info">
         <h3>{item.title}</h3>
-        <p>{item.description || "Ưu đãi hấp dẫn dành cho khách hàng."}</p>
+        <p>{description}</p>
+        {item.code && <p>Mã: {item.code}</p>}
       </div>
     </div>
   );
 }
 
 export default function HomePage({
-  nowShowing = demoNowShowing,
-  comingSoon = demoComingSoon,
-  promotions = demoPromotions,
-}: HomePageProps) {
+  nowShowing: initialNowShowing = demoNowShowing,
+  comingSoon: initialComingSoon = demoComingSoon,
+  promotions: initialPromotions = demoPromotions,
+}: {
+  nowShowing?: HomeMovie[];
+  comingSoon?: HomeMovie[];
+  promotions?: HomePromotion[];
+}) {
+  const [nowShowing, setNowShowing] =
+    useState<HomeMovie[]>(initialNowShowing);
+  const [comingSoon, setComingSoon] =
+    useState<HomeMovie[]>(initialComingSoon);
+  const [promotions, setPromotions] =
+    useState<HomePromotion[]>(initialPromotions);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
   const [currentSlide, setCurrentSlide] = useState<number>(0);
 
   const safeBanners = useMemo(() => {
@@ -193,6 +207,82 @@ export default function HomePage({
     );
   };
 
+  useEffect(() => {
+    const loadHomeData = async () => {
+      try {
+        setIsLoading(true);
+        setError("");
+
+        const [movieData, promotionData] = await Promise.all([
+          getMovies(),
+          getPromotions(),
+        ]);
+
+        const nowShowingMovies =
+          movieData
+            .filter(
+              (movie) => (movie.status || "NOW_SHOWING") === "NOW_SHOWING"
+            )
+            .map((movie) => ({
+              _id: movie._id,
+              title: movie.title,
+              poster: movie.poster,
+              genre: movie.genre,
+              status: movie.status,
+            })) || [];
+
+        const comingSoonMovies =
+          movieData
+            .filter(
+              (movie) => (movie.status || "NOW_SHOWING") !== "NOW_SHOWING"
+            )
+            .map((movie) => ({
+              _id: movie._id,
+              title: movie.title,
+              poster: movie.poster,
+              genre: movie.genre,
+              status: movie.status,
+            })) || [];
+
+        const mappedPromotions: HomePromotion[] =
+          (promotionData || []).map((item: ApiPromotion) => {
+            const promo = item as unknown as Record<string, any>;
+            return {
+              _id: promo._id,
+              title: promo.title || promo.code || "Khuyến mãi",
+              description:
+                promo.description ||
+                promo.discount ||
+                "Cập nhật các ưu đãi mới nhất tại rạp.",
+              image: promo.image,
+              code: promo.code,
+            };
+          });
+
+        setNowShowing(
+          nowShowingMovies.length > 0 ? nowShowingMovies : demoNowShowing
+        );
+        setComingSoon(
+          comingSoonMovies.length > 0 ? comingSoonMovies : demoComingSoon
+        );
+        setPromotions(
+          mappedPromotions.length > 0 ? mappedPromotions : demoPromotions
+        );
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : "Không tải được dữ liệu trang chủ";
+        setError(message);
+        console.error("Error loading home data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadHomeData();
+  }, []);
+
   return (
     <div className="page-home">
       <main>
@@ -202,7 +292,6 @@ export default function HomePage({
               <span className="hero-badge">Đang hot</span>
               <h1>Trải nghiệm điện ảnh đỉnh cao tại Popcorn Cinema</h1>
               <p>Đặt vé nhanh, chọn ghế dễ, ưu đãi hấp dẫn mỗi tuần.</p>
-
 
               <div className="hero-buttons">
                 <Link to="/movies" className="btn btn-primary">
@@ -266,7 +355,11 @@ export default function HomePage({
             </div>
 
             <div className="movie-grid">
-              {nowShowing.length > 0 ? (
+              {isLoading ? (
+                <p className="empty-text">Đang tải phim...</p>
+              ) : error ? (
+                <p className="empty-text">Lỗi: {error}</p>
+              ) : nowShowing.length > 0 ? (
                 nowShowing.map((movie) => (
                   <React.Fragment key={movie._id}>
                     <MovieCard movie={movie} />
@@ -287,7 +380,11 @@ export default function HomePage({
             </div>
 
             <div className="movie-grid">
-              {comingSoon.length > 0 ? (
+              {isLoading ? (
+                <p className="empty-text">Đang tải phim...</p>
+              ) : error ? (
+                <p className="empty-text">Lỗi: {error}</p>
+              ) : comingSoon.length > 0 ? (
                 comingSoon.map((movie) => (
                   <React.Fragment key={movie._id}>
                     <MovieCard movie={movie} isComingSoon />
@@ -307,8 +404,12 @@ export default function HomePage({
               <Link to="/promotions">Xem tất cả</Link>
             </div>
 
-            <div className="promo-grid">
-              {promotions.length > 0 ? (
+          <div className="promo-grid">
+              {isLoading ? (
+                <p className="empty-text">Đang tải khuyến mãi...</p>
+              ) : error ? (
+                <p className="empty-text">Lỗi: {error}</p>
+              ) : promotions.length > 0 ? (
                 promotions.map((item) => (
                   <React.Fragment key={item._id}>
                     <PromotionCard item={item} />
