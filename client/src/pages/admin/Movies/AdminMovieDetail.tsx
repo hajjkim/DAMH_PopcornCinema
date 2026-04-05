@@ -1,27 +1,61 @@
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "../../../styles/Admin/Movies/AdminMovies.css";
+import { movieAPI } from "../../../services/admin.api";
 
 export default function AdminMovieDetail() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
+  const [movie, setMovie] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // 👉 mock data (sau này thay API)
-  const movie = {
-    id,
-    title: "Thỏ ơi!!!",
-    genre: "Hoạt hình",
-    duration: 120,
-    release_date: "2025-06-01",
-    age_rating: "P",
-    director: "ABC",
-    actors: "XYZ",
-    language: "Tiếng Việt",
-    subtitle: "English",
-    trailer_url: "https://youtube.com",
-    status: "NOW_SHOWING",
-    description: "Phim rất hay...",
-    poster_url: "/images/movies/phim1.jpg",
-  };
+  useEffect(() => {
+    const fetchMovie = async () => {
+      if (!id) return;
+      try {
+        const data = await movieAPI.getById(id);
+        setMovie(data);
+      } catch (err: any) {
+        console.error("Error fetching movie:", err);
+        setError(err.message || "Không thể tải dữ liệu phim");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMovie();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <section className="admin-page-section">
+        <div style={{ textAlign: "center", padding: "40px" }}>
+          <p>Đang tải dữ liệu...</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="admin-page-section">
+        <div style={{ textAlign: "center", padding: "40px", color: "red" }}>
+          <p>Lỗi: {error}</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (!movie) {
+    return (
+      <section className="admin-page-section">
+        <div style={{ textAlign: "center", padding: "40px" }}>
+          <p>Phim không tìm thấy</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="admin-page-section">
@@ -37,7 +71,7 @@ export default function AdminMovieDetail() {
 
         <button
           className="admin-btn admin-btn-primary"
-          onClick={() => navigate(`/admin/movies/${movie.id}/edit`)}
+          onClick={() => navigate(`/admin/movies/${id}/edit`)}
         >
           Sửa phim
         </button>
@@ -49,7 +83,7 @@ export default function AdminMovieDetail() {
         {/* POSTER */}
         <div className="movie-detail-poster">
           <img
-            src={movie.poster_url || "/images/movies/default.jpg"}
+            src={movie.posterUrl || "/images/movies/default.jpg"}
             alt={movie.title}
           />
         </div>
@@ -58,21 +92,15 @@ export default function AdminMovieDetail() {
         <div className="movie-detail-info">
           <h2>{movie.title}</h2>
 
-          <p><strong>Thể loại:</strong> {movie.genre}</p>
-          <p><strong>Thời lượng:</strong> {movie.duration} phút</p>
-          <p><strong>Ngày khởi chiếu:</strong> {movie.release_date}</p>
-          <p><strong>Phân loại:</strong> {movie.age_rating}</p>
+          <p><strong>Thể loại:</strong> {movie.genres?.join(", ")}</p>
+          <p><strong>Thời lượng:</strong> {movie.durationMinutes} phút</p>
+          <p><strong>Ngày khởi chiếu:</strong> {movie.releaseDate ? new Date(movie.releaseDate).toLocaleDateString("vi-VN") : "N/A"}</p>
+          <p><strong>Phân loại:</strong> {movie.ageRating}</p>
           <p><strong>Đạo diễn:</strong> {movie.director}</p>
-          <p><strong>Diễn viên:</strong> {movie.actors}</p>
+          <p><strong>Diễn viên:</strong> {movie.actors?.join(", ")}</p>
           <p><strong>Ngôn ngữ:</strong> {movie.language}</p>
           <p><strong>Phụ đề:</strong> {movie.subtitle}</p>
-
-          {/* <p>
-            <strong>Trailer:</strong>{" "}
-            <a href={movie.trailer_url} target="_blank">
-              {movie.trailer_url}
-            </a>
-          </p> */}
+          <p><strong>Trailer URL:</strong> {movie.trailerUrl ? <a href={movie.trailerUrl} target="_blank" rel="noopener noreferrer">{movie.trailerUrl}</a> : "N/A"}</p>
 
           <p>
             <strong>Trạng thái:</strong>{" "}

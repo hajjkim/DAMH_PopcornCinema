@@ -1,23 +1,26 @@
-const mongoose = require("mongoose");
-const dotenv = require("dotenv");
-const bcryptjs = require("bcryptjs");
-dotenv.config();
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import path from "path";
+import bcrypt from "bcryptjs";
 
-const { User } = require("./schemas/user.schema");
-const { Movie } = require("./schemas/movie.schema");
-const { Showtime } = require("./schemas/showtime.schema");
-const { Snack } = require("./schemas/snack.schema");
-const { Promotion } = require("./schemas/promotion.schema");
-const { Booking } = require("./schemas/booking.schema");
-const { SeatHold } = require("./schemas/seat-hold.schema");
-const { Cinema } = require("./schemas/cinema.schema");
-const { Auditorium } = require("./schemas/auditorium.schema");
+import { User } from "./schemas/user.schema";
+import { Movie } from "./schemas/movie.schema";
+import { Showtime } from "./schemas/showtime.schema";
+import { Snack } from "./schemas/snack.schema";
+import { Promotion } from "./schemas/promotion.schema";
+import { Booking } from "./schemas/booking.schema";
+import { SeatHold } from "./schemas/seat-hold.schema";
+import { Cinema } from "./schemas/cinema.schema";
+import { Auditorium } from "./schemas/auditorium.schema";
+
+// Load .env from root folder
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const MONGO_URI =
   process.env.MONGO_URI || "mongodb://127.0.0.1:27017/popcorn_cinema";
 
 function generateSeats(rows = 8, cols = 12) {
-  const seats = [];
+  const seats: string[] = [];
   const rowNames = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   for (let r = 0; r < rows; r++) {
     for (let c = 1; c <= cols; c++) {
@@ -31,7 +34,7 @@ async function seed() {
   await mongoose.connect(MONGO_URI);
   console.log("MongoDB connected");
 
-  // clear old data
+  // Clear old data
   await Promise.all([
     User.deleteMany({}),
     Movie.deleteMany({}),
@@ -47,8 +50,8 @@ async function seed() {
 
   // USERS
   const [hashedPassword1, hashedPassword2] = await Promise.all([
-    bcryptjs.hash("password123", 10),
-    bcryptjs.hash("admin123", 10),
+    bcrypt.hash("password123", 10),
+    bcrypt.hash("admin123", 10),
   ]);
 
   const users = await User.insertMany([
@@ -72,7 +75,7 @@ async function seed() {
   console.log("  Account 1: a@gmail.com / password123");
   console.log("  Account 2: admin@gmail.com / admin123");
 
-  // CINEMAS & AUDITORIUMS (mở rộng đa thành phố)
+  // CINEMAS
   const cinemaDocs = await Cinema.insertMany([
     { name: "Popcorn Cinema Vincom Bà Triệu", address: "191 Bà Triệu, Hai Bà Trưng, Hà Nội", city: "Hà Nội" },
     { name: "Popcorn Cinema Royal City", address: "72A Nguyễn Trãi, Thanh Xuân, Hà Nội", city: "Hà Nội" },
@@ -84,6 +87,7 @@ async function seed() {
     { name: "Popcorn Cinema Vincom Ngô Quyền", address: "910A Ngô Quyền, Sơn Trà, Đà Nẵng", city: "Đà Nẵng" },
   ]);
 
+  // AUDITORIUMS
   const auditoriumDocs = await Auditorium.insertMany([
     { cinemaId: cinemaDocs[0]._id, name: "Hall 1", totalRows: 9, totalColumns: 12, seatCapacity: 108 },
     { cinemaId: cinemaDocs[0]._id, name: "Hall 2", totalRows: 10, totalColumns: 12, seatCapacity: 120 },
@@ -100,11 +104,11 @@ async function seed() {
     { cinemaId: cinemaDocs[7]._id, name: "Hall 2", totalRows: 8, totalColumns: 12, seatCapacity: 96 },
   ]);
 
-  // MOVIES (cập nhật 02/04/2026)
+  // MOVIES (updated 02/04/2026)
   const movies = await Movie.insertMany([
     {
       title: "Super Mario Thiên Hà",
-      genre: "Hoạt hình, Phiêu lưu",
+      genres: ["Hoạt hình", "Phiêu lưu"],
       duration: 113,
       director: "Đang cập nhật",
       actors: ["Chris Pratt", "Anya Taylor-Joy", "Jack Black"],
@@ -118,7 +122,7 @@ async function seed() {
     },
     {
       title: "TÀI",
-      genre: "Tâm lý, Gia đình, Hành động",
+      genres: ["Tâm lý", "Gia đình", "Hành động"],
       duration: 125,
       director: "Mai Tài Phến",
       actors: ["Mai Tài Phến", "Mỹ Tâm", "Hồng Ánh"],
@@ -132,7 +136,7 @@ async function seed() {
     },
     {
       title: "Quỷ Nhập Tràng 2",
-      genre: "Kinh dị",
+      genres: ["Kinh dị"],
       duration: 112,
       director: "Đang cập nhật",
       actors: ["Quang Tuấn", "Khả Như"],
@@ -146,7 +150,7 @@ async function seed() {
     },
     {
       title: "Cô Dâu!",
-      genre: "Kinh dị, Tình cảm",
+      genres: ["Kinh dị", "Tình cảm"],
       duration: 118,
       director: "Maggie Gyllenhaal",
       actors: ["Christian Bale", "Jessie Buckley"],
@@ -160,7 +164,7 @@ async function seed() {
     },
     {
       title: "Cú Nhảy Kỳ Diệu",
-      genre: "Hoạt hình, Phiêu lưu, Gia đình",
+      genres: ["Hoạt hình", "Phiêu lưu", "Gia đình"],
       duration: 102,
       director: "Đang cập nhật",
       actors: ["Lồng tiếng Việt"],
@@ -174,7 +178,7 @@ async function seed() {
     },
     {
       title: "Greenland 2: Đại Di Cư",
-      genre: "Hành động, Thảm họa",
+      genres: ["Hành động", "Thảm họa"],
       duration: 121,
       director: "Ric Roman Waugh",
       actors: ["Gerard Butler", "Morena Baccarin"],
@@ -188,7 +192,7 @@ async function seed() {
     },
     {
       title: "Tuyển Thủ Dê: Mùi Vị Chiến Thắng",
-      genre: "Hoạt hình, Hài, Thể thao",
+      genres: ["Hoạt hình", "Hài", "Thể thao"],
       duration: 93,
       director: "Tyree Dillihay",
       actors: ["Caleb McLaughlin", "Gabrielle Union"],
@@ -202,7 +206,7 @@ async function seed() {
     },
     {
       title: "Song Hỷ Lâm Nguy",
-      genre: "Hài, Gia đình",
+      genres: ["Hài", "Gia đình"],
       duration: 110,
       director: "Vũ Hà",
       actors: ["Dustin Nguyễn", "Misthy", "Jun Vũ"],
@@ -216,7 +220,7 @@ async function seed() {
     },
     {
       title: "Hẹn Em Ngày Nhật Thực",
-      genre: "Tình cảm, Gia đình",
+      genres: ["Tình cảm", "Gia đình"],
       duration: 115,
       director: "Lê Thiện Viễn",
       actors: ["Đoàn Thiên Ân", "Khương Lê", "NSND Lê Khanh"],
@@ -230,7 +234,7 @@ async function seed() {
     },
     {
       title: "Kiki's Delivery Service (IMAX)",
-      genre: "Hoạt hình, Phiêu lưu",
+      genres: ["Hoạt hình", "Phiêu lưu"],
       duration: 103,
       director: "Hayao Miyazaki",
       actors: ["Minami Takayama", "Kappei Yamaguchi"],
@@ -244,7 +248,7 @@ async function seed() {
     },
     {
       title: "Dưới Bóng Điện Hạ",
-      genre: "Lịch sử, Tâm lý",
+      genres: ["Lịch sử", "Tâm lý"],
       duration: 128,
       director: "Đang cập nhật",
       actors: ["Yoo Hae Jin", "Park Ji Hoon", "Yoo Ji Tae"],
@@ -258,7 +262,7 @@ async function seed() {
     },
     {
       title: "Xác Ướp",
-      genre: "Kinh dị, Giật gân",
+      genres: ["Kinh dị", "Giật gân"],
       duration: 108,
       director: "Lee Cronin",
       actors: ["Jack Reynor", "Laia Costa", "May Calamawy"],
@@ -272,7 +276,7 @@ async function seed() {
     },
     {
       title: "Trùm Sò",
-      genre: "Hài, Dân gian",
+      genres: ["Hài", "Dân gian"],
       duration: 100,
       director: "Đỗ Đức Thịnh",
       actors: ["Đức Thịnh", "Phương Nam", "Doãn Quốc Đam"],
@@ -286,7 +290,7 @@ async function seed() {
     },
     {
       title: "Michael",
-      genre: "Tiểu sử, Âm nhạc",
+      genres: ["Tiểu sử", "Âm nhạc"],
       duration: 138,
       director: "Antoine Fuqua",
       actors: ["Jaafar Jackson", "Nia Long", "Colman Domingo"],
@@ -300,7 +304,7 @@ async function seed() {
     },
     {
       title: "Heo Năm Móng",
-      genre: "Kinh dị, Hài đen",
+      genres: ["Kinh dị", "Hài đen"],
       duration: 98,
       director: "Đang cập nhật",
       actors: ["Đang cập nhật"],
@@ -314,7 +318,7 @@ async function seed() {
     },
     {
       title: "Anh Hùng",
-      genre: "Hành động, Tâm lý",
+      genres: ["Hành động", "Tâm lý"],
       duration: 122,
       director: "Đang cập nhật",
       actors: ["Thái Hòa", "Võ Tấn Phát", "Hồng Ánh"],
@@ -328,10 +332,23 @@ async function seed() {
     },
   ]);
 
-  // SHOWTIMES (lịch mẫu nhiều ngày)
+  // SHOWTIMES
   const timeSlots = ["09:30", "12:30", "15:45", "19:00", "21:30"];
   const nowShowingDates = ["2026-04-02", "2026-04-03", "2026-04-04", "2026-04-05"];
   const showtimes = [];
+
+  const parseTime = (dateStr: string, timeStr: string) => {
+    const [hours, minutes] = timeStr.split(":").map(Number);
+    const date = new Date(dateStr);
+    date.setHours(hours, minutes, 0, 0);
+    return date;
+  };
+
+  const addMinutes = (date: Date, minutes: number) => {
+    const result = new Date(date);
+    result.setMinutes(result.getMinutes() + minutes);
+    return result;
+  };
 
   for (let i = 0; i < movies.length; i++) {
     const movie = movies[i];
@@ -341,18 +358,19 @@ async function seed() {
         const dateIndex = nowShowingDates.indexOf(date);
         for (const time of timeSlots.slice(0, 3)) {
           const timeIndex = timeSlots.indexOf(time);
-          const auditorium = auditoriumDocs[(i + dateIndex + timeIndex) % auditoriumDocs.length];
-          const cinemaName =
-            cinemaDocs.find((c: any) => c._id.equals(auditorium.cinemaId))?.name || "Popcorn Cinema";
-          const roomName = auditorium.name;
+          const auditorium =
+            auditoriumDocs[(i + dateIndex + timeIndex) % auditoriumDocs.length];
+
+          const startTime = parseTime(date, time);
+          const endTime = addMinutes(startTime, 130);
 
           const showtime = await Showtime.create({
             movieId: movie._id,
-            cinema: cinemaName,
-            date,
-            time,
-            seatLayout: generateSeats(auditorium.totalRows, auditorium.totalColumns),
-            room: roomName,
+            auditoriumId: auditorium._id,
+            startTime,
+            endTime,
+            basePrice: 100000,
+            status: "OPEN",
           });
           showtimes.push(showtime);
         }
@@ -366,18 +384,19 @@ async function seed() {
       for (const date of comingDates) {
         for (const time of timeSlots.slice(2, 5)) {
           const timeIndex = timeSlots.indexOf(time);
-          const auditorium = auditoriumDocs[(i + timeIndex) % auditoriumDocs.length];
-          const cinemaName =
-            cinemaDocs.find((c: any) => c._id.equals(auditorium.cinemaId))?.name || "Popcorn Cinema";
-          const roomName = auditorium.name;
+          const auditorium =
+            auditoriumDocs[(i + timeIndex) % auditoriumDocs.length];
+
+          const startTime = parseTime(date, time);
+          const endTime = addMinutes(startTime, 130);
 
           const showtime = await Showtime.create({
             movieId: movie._id,
-            cinema: cinemaName,
-            date,
-            time,
-            seatLayout: generateSeats(auditorium.totalRows, auditorium.totalColumns),
-            room: roomName,
+            auditoriumId: auditorium._id,
+            startTime,
+            endTime,
+            basePrice: 100000,
+            status: "OPEN",
           });
           showtimes.push(showtime);
         }
@@ -395,19 +414,55 @@ async function seed() {
     { name: "Trà đào cam sả", price: 45000 },
   ]);
 
-  // PROMOTIONS
+  // PROMOTIONS — using the full schema fields resolved from promotion.schema.ts
   const promotions = await Promotion.insertMany([
-    { title: "Giảm 30% cho thành viên mới", code: "WELCOME30", discount: "30%" },
-    { title: "Giảm 20% vé từ Thứ 2 - Thứ 5", code: "WEEKDAY20", discount: "20%" },
-    { title: "Giảm 10% thanh toán VNPAY", code: "VNPAY10", discount: "10%" },
-    { title: "Mua 2 vé tặng 1 bắp", code: "CORNFREE", discount: "FREESNACK" },
+    {
+      title: "Giảm 30% cho thành viên mới",
+      code: "WELCOME30",
+      discountType: "PERCENTAGE",
+      discountValue: 30,
+      minOrderValue: 0,
+      startDate: new Date("2026-01-01"),
+      endDate: new Date("2026-12-31"),
+      status: "ACTIVE",
+    },
+    {
+      title: "Giảm 20% vé từ Thứ 2 - Thứ 5",
+      code: "WEEKDAY20",
+      discountType: "PERCENTAGE",
+      discountValue: 20,
+      minOrderValue: 0,
+      startDate: new Date("2026-01-01"),
+      endDate: new Date("2026-12-31"),
+      status: "ACTIVE",
+    },
+    {
+      title: "Giảm 10% thanh toán VNPAY",
+      code: "VNPAY10",
+      discountType: "PERCENTAGE",
+      discountValue: 10,
+      minOrderValue: 0,
+      startDate: new Date("2026-01-01"),
+      endDate: new Date("2026-12-31"),
+      status: "ACTIVE",
+    },
+    {
+      title: "Giảm 50.000đ đơn từ 200.000đ",
+      code: "CORNFREE",
+      discountType: "FIXED_AMOUNT",
+      discountValue: 50000,
+      minOrderValue: 200000,
+      startDate: new Date("2026-01-01"),
+      endDate: new Date("2026-12-31"),
+      status: "ACTIVE",
+    },
   ]);
 
   // BOOKINGS (demo)
   await Booking.insertMany([
     {
-      userId: users[0]._id,
-      showtimeId: showtimes[0]._id,
+      user: users[0]._id,
+      showtime: showtimes[0]._id,
       seats: ["A1", "A2"],
       snacks: [{ snackId: snacks[0]._id, qty: 1 }],
       promotionCode: promotions[0].code,
@@ -418,14 +473,15 @@ async function seed() {
     },
   ]);
 
-  console.log("Seed complete with updated April 2026 data");
-  console.log(`Users: ${users.length}`);
-  console.log(`Cinemas: ${cinemaDocs.length}`);
-  console.log(`Auditoriums: ${auditoriumDocs.length}`);
-  console.log(`Movies: ${movies.length}`);
-  console.log(`Showtimes: ${showtimes.length}`);
-  console.log(`Snacks: ${snacks.length}`);
-  console.log(`Promotions: ${promotions.length}`);
+  console.log("\n✅ Seed complete with updated April 2026 data");
+  console.log(`  Users:        ${users.length}`);
+  console.log(`  Cinemas:      ${cinemaDocs.length}`);
+  console.log(`  Auditoriums:  ${auditoriumDocs.length}`);
+  console.log(`  Movies:       ${movies.length}`);
+  console.log(`  Showtimes:    ${showtimes.length}`);
+  console.log(`  Snacks:       ${snacks.length}`);
+  console.log(`  Promotions:   ${promotions.length}`);
+
   mongoose.disconnect();
 }
 

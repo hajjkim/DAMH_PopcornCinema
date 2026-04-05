@@ -25,11 +25,7 @@ const sanitizeUser = (user: IUserDocument) => ({
   updatedAt: user.updatedAt,
 });
 
-export const register = async ({
-  fullName,
-  email,
-  password,
-}: RegisterInput) => {
+export const register = async ({ fullName, email, password }: RegisterInput) => {
   const normalizedEmail = email.trim().toLowerCase();
 
   const existingUser = await User.findOne({ email: normalizedEmail });
@@ -61,7 +57,8 @@ export const register = async ({
 export const login = async ({ email, password }: LoginInput) => {
   const normalizedEmail = email.trim().toLowerCase();
 
-  const user = await User.findOne({ email: normalizedEmail });
+  // .select("+passwordHash") cần thiết nếu schema có passwordHash: { select: false }
+  const user = await User.findOne({ email: normalizedEmail }).select("+passwordHash");
   if (!user) {
     throw new Error("Invalid email or password");
   }

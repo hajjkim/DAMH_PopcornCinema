@@ -35,16 +35,19 @@ export default function RegisterPage() {
 
     if (!form.fullName || !form.email || !form.password || !form.confirmPassword) {
       setError("❌ Vui lòng nhập đầy đủ thông tin");
+      setLoading(false);
       return;
     }
 
     if (form.password.length < 6) {
       setError("❌ Mật khẩu phải ≥ 6 ký tự");
+      setLoading(false);
       return;
     }
 
     if (form.password !== form.confirmPassword) {
       setError("❌ Mật khẩu không khớp");
+      setLoading(false);
       return;
     }
 
@@ -103,6 +106,7 @@ export default function RegisterPage() {
                   placeholder="Nhập họ và tên..."
                   value={form.fullName}
                   onChange={handleChange}
+                  disabled={loading}
                 />
               </div>
 
@@ -114,6 +118,7 @@ export default function RegisterPage() {
                   placeholder="Nhập email..."
                   value={form.email}
                   onChange={handleChange}
+                  disabled={loading}
                 />
               </div>
 
@@ -125,6 +130,7 @@ export default function RegisterPage() {
                   placeholder="Nhập mật khẩu..."
                   value={form.password}
                   onChange={handleChange}
+                  disabled={loading}
                 />
               </div>
 
@@ -136,6 +142,7 @@ export default function RegisterPage() {
                   placeholder="Nhập lại mật khẩu..."
                   value={form.confirmPassword}
                   onChange={handleChange}
+                  disabled={loading}
                 />
               </div>
 

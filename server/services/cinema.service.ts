@@ -14,6 +14,8 @@ export const createCinema = async (data: {
     name: string;
     address: string;
     city: string;
+    totalRooms?: number;
+    phone?: string;
     status?: "ACTIVE" | "INACTIVE";
     }) => {
     return await Cinema.create(data);

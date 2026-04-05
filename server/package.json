@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "description": "Backend server for Popcorn Cinema",
   "scripts": {
+    "build": "tsc -p tsconfig.json",
     "testdb": "ts-node test-db.ts",
     "seed": "ts-node seed.ts",
     "db:generate": "ts-node seed.ts",
     "db:reset": "ts-node seed.ts",
     "dev": "nodemon --watch . --ext ts,d.ts --exec ts-node --files --project tsconfig.json app.ts",
-    "start": "node dist/app.js",
-    "build": "tsc -p tsconfig.json"
+    "start": "node dist/app.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

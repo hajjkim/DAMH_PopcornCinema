@@ -14,6 +14,7 @@ export default function AdminLayout() {
     { path: "/admin/dashboard", label: "Thống kê", icon: "▦" },
     { path: "/admin/movies", label: "Quản lý phim", icon: "🎬" },
     { path: "/admin/cinemas", label: "Rạp", icon: "🎯" },
+    { path: "/admin/auditoriums", label: "Phòng chiếu", icon: "🎪" },
     { path: "/admin/showtimes", label: "Suất chiếu", icon: "🕒" },
     { path: "/admin/orders", label: "Đơn hàng", icon: "📦" },
     { path: "/admin/snacks", label: "Bắp nước", icon: "🍿" },

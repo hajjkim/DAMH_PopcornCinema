@@ -1,3 +1,4 @@
+
 import { NextFunction, Request, Response } from "express";
 import { verifyAccessToken } from "../utils/jwt";
 import { User } from "../schemas/user.schema";
@@ -38,6 +39,7 @@ export const authenticate = async (
 
     next();
   } catch (error) {
+    console.error("Auth error:", error instanceof Error ? error.message : error);
     res.status(401).json({ message: "Invalid or expired token" });
   }
 };

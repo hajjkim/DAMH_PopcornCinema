@@ -16,6 +16,12 @@ import AdminCinemaCreate from "../pages/admin/Cinema/AdminCinemaCreate";
 import AdminCinemaDetail from "../pages/admin/Cinema/AdminCinemaDetail";
 import AdminCinemaEdit from "../pages/admin/Cinema/AdminCinemaEdit";
 
+// AUDITORIUMS
+import AdminAuditoriums from "../pages/admin/Auditoriums/AdminAuditoriums";
+import AdminAuditoriumCreate from "../pages/admin/Auditoriums/AdminAuditoriumCreate";
+import AdminAuditoriumDetail from "../pages/admin/Auditoriums/AdminAuditoriumDetail";
+import AdminAuditoriumEdit from "../pages/admin/Auditoriums/AdminAuditoriumEdit";
+
 // SHOWTIMES
 import AdminShowtimes from "../pages/admin/Showtimes/AdminShowtimes";
 import AdminShowtimeCreate from "../pages/admin/Showtimes/AdminShowtimeCreate";
@@ -65,6 +71,12 @@ export const adminRoutes = (
     <Route path="cinemas/create" element={<AdminCinemaCreate />} />
     <Route path="cinemas/:id" element={<AdminCinemaDetail />} />
     <Route path="cinemas/:id/edit" element={<AdminCinemaEdit />} />
+
+    {/* AUDITORIUMS */}
+    <Route path="auditoriums" element={<AdminAuditoriums />} />
+    <Route path="auditoriums/create" element={<AdminAuditoriumCreate />} />
+    <Route path="auditoriums/:id" element={<AdminAuditoriumDetail />} />
+    <Route path="auditoriums/:id/edit" element={<AdminAuditoriumEdit />} />
 
     {/* SHOWTIMES */}
     <Route path="showtimes" element={<AdminShowtimes />} />

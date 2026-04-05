@@ -1,17 +1,60 @@
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import "../../../styles/Admin/Cinemas/AdminCinemas.css";
-export default function AdminCinemaDetail() {
-  const { id } = useParams();
+import { cinemaAPI } from "../../../services/admin.api";
 
-  const cinema = {
-    id,
-    name: "CGV Vincom",
-    city: "HCM",
-    address: "Quận 1",
-    totalRooms: 5,
-    phone: "0123456789",
-    status: "ACTIVE",
-  };
+export default function AdminCinemaDetail() {
+  const { id } = useParams<{ id: string }>();
+  const [cinema, setCinema] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchCinema = async () => {
+      if (!id) return;
+      try {
+        const data = await cinemaAPI.getById(id);
+        setCinema(data);
+      } catch (err: any) {
+        console.error("Error fetching cinema:", err);
+        setError(err.message || "Không thể tải dữ liệu rạp");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCinema();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <section className="admin-page-section">
+        <div style={{ textAlign: "center", padding: "40px" }}>
+          <p>Đang tải dữ liệu...</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="admin-page-section">
+        <div style={{ textAlign: "center", padding: "40px", color: "red" }}>
+          <p>Lỗi: {error}</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (!cinema) {
+    return (
+      <section className="admin-page-section">
+        <div style={{ textAlign: "center", padding: "40px" }}>
+          <p>Rạp không tìm thấy</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="admin-page-section">
@@ -39,10 +82,6 @@ export default function AdminCinemaDetail() {
 
           <div className="cinema-detail-item-full">
             <strong>Địa chỉ:</strong> {cinema.address}
-          </div>
-
-          <div>
-            <strong>Số phòng:</strong> {cinema.totalRooms}
           </div>
 
           <div>

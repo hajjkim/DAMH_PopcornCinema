@@ -1,43 +1,123 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "../../styles/Admin/AdminReport.css";
+import { adminAPI } from "../../services/admin.api";
+
+interface MovieReport {
+  _id: string;
+  title: string;
+  ticketsSold: number;
+  orders: number;
+  revenue: number;
+  poster: string;
+}
+
+interface SnackReport {
+  _id: string;
+  name: string;
+  quantitySold: number;
+  orders: number;
+  revenue: number;
+  image: string;
+}
+
+interface ReportStats {
+  totalOrders: number;
+  totalTicketSold: number;
+  totalMovieRevenue: number;
+  totalSnackRevenue: number;
+}
 
 export default function AdminReports() {
   const [tab, setTab] = useState<"movies" | "snacks">("movies");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const stats = {
-    totalOrders: 120,
-    totalTicketSold: 450,
-    totalMovieRevenue: 120000000,
-    totalSnackRevenue: 30000000,
-  };
+  const [stats, setStats] = useState<ReportStats>({
+    totalOrders: 0,
+    totalTicketSold: 0,
+    totalMovieRevenue: 0,
+    totalSnackRevenue: 0,
+  });
 
-  const movieReport = [
-    {
-      id: 1,
-      title: "Avengers",
-      ticketsSold: 200,
-      orders: 120,
-      revenue: 60000000,
-      poster: "/images/movies/phim1.jpg",
-    },
-  ];
+  const [movieReport, setMovieReport] = useState<MovieReport[]>([]);
+  const [snackReport, setSnackReport] = useState<SnackReport[]>([]);
 
-  const snackReport = [
-    {
-      id: 1,
-      name: "Combo Bắp",
-      quantitySold: 150,
-      orders: 100,
-      revenue: 15000000,
-      image: "/images/snacks/snack1.jpg",
-    },
-  ];
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        setLoading(true);
 
-  const formatCurrency = (v: number) =>
-    v.toLocaleString("vi-VN") + "đ";
+        // Fetch movie report
+        const moviesRes = await adminAPI.getMoviesReport();
+        setMovieReport(moviesRes?.movies || []);
+
+        // Fetch snacks report
+        const snacksRes = await adminAPI.getSnacksReport();
+        setSnackReport(snacksRes?.snacks || []);
+
+        // Calculate stats
+        const totalMovieRevenue = moviesRes?.movies?.reduce(
+          (sum: number, m: MovieReport) => sum + m.revenue,
+          0
+        ) || 0;
+        const totalSnackRevenue = snacksRes?.snacks?.reduce(
+          (sum: number, s: SnackReport) => sum + s.revenue,
+          0
+        ) || 0;
+        const totalTicketSold = moviesRes?.movies?.reduce(
+          (sum: number, m: MovieReport) => sum + m.ticketsSold,
+          0
+        ) || 0;
+
+        setStats({
+          totalOrders:
+            (moviesRes?.movies?.reduce(
+              (sum: number, m: MovieReport) => sum + m.orders,
+              0
+            ) || 0) +
+            (snacksRes?.snacks?.reduce(
+              (sum: number, s: SnackReport) => sum + s.orders,
+              0
+            ) || 0),
+          totalTicketSold,
+          totalMovieRevenue,
+          totalSnackRevenue,
+        });
+      } catch (err: any) {
+        console.error("Error fetching reports:", err);
+        setError(err.message || "Failed to load reports");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, []);
+
+  const formatCurrency = (v: number) => v.toLocaleString("vi-VN") + "đ";
 
   const calcPercent = (value: number, total: number) =>
     total ? Math.round((value / total) * 100) : 0;
+
+  if (loading) {
+    return (
+      <section className="admin-page-section">
+        <div style={{ textAlign: "center", padding: "40px" }}>
+          <p>Đang tải dữ liệu...</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="admin-page-section">
+        <div style={{ textAlign: "center", padding: "40px", color: "red" }}>
+          <p>Lỗi: {error}</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="admin-page-section">
@@ -100,11 +180,11 @@ export default function AdminReports() {
 
             <tbody>
               {movieReport.map((m, i) => (
-                <tr key={m.id}>
+                <tr key={m._id}>
                   <td>#{i + 1}</td>
 
                   <td>
-                    <img src={m.poster} className="admin-thumb" />
+                    <img src={m.poster} className="admin-thumb" alt={m.title} />
                   </td>
 
                   <td>{m.title}</td>
@@ -145,11 +225,11 @@ export default function AdminReports() {
 
             <tbody>
               {snackReport.map((s, i) => (
-                <tr key={s.id}>
+                <tr key={s._id}>
                   <td>#{i + 1}</td>
 
                   <td>
-                    <img src={s.image} className="admin-thumb" />
+                    <img src={s.image} className="admin-thumb" alt={s.name} />
                   </td>
 
                   <td>{s.name}</td>
@@ -163,7 +243,7 @@ export default function AdminReports() {
                         style={{
                           width: `${calcPercent(
                             s.quantitySold,
-                            200
+                            snackReport.reduce((sum) => sum + 1, 0) * 100
                           )}%`,
                         }}
                       />

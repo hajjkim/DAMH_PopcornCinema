@@ -1,28 +1,120 @@
+import { useEffect, useState } from "react";
 import "../../styles/Admin/AdminDashboard.css";
+import { adminAPI } from "../../services/admin.api";
+import { movieAPI } from "../../services/movie.api";
+
+interface AdminStats {
+  totalMovies: number;
+  totalShowtimes: number;
+  totalBookings: number;
+  totalUsers: number;
+}
+
+interface TopMovie {
+  _id: string;
+  title: string;
+  posterUrl?: string;
+  bookingCount: number;
+}
+
+interface RevenueStats {
+  totalRevenue: number;
+  ticketRevenue: number;
+  snackRevenue: number;
+  occupancyRate: number;
+  weeklyGrowth: number;
+}
 
 export default function AdminDashboard() {
+  const [stats, setStats] = useState<AdminStats>({
+    totalMovies: 0,
+    totalShowtimes: 0,
+    totalBookings: 0,
+    totalUsers: 0,
+  });
+
+  const [topMovies, setTopMovies] = useState<TopMovie[]>([]);
+
+  const [revenue, setRevenue] = useState<RevenueStats>({
+    totalRevenue: 0,
+    ticketRevenue: 0,
+    snackRevenue: 0,
+    occupancyRate: 0,
+    weeklyGrowth: 0,
+  });
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch admin stats
+        const statsResponse = await adminAPI.getStats();
+        setStats(statsResponse);
+
+        // Fetch top movies
+        const topMoviesResponse = await adminAPI.getTopMovies();
+        setTopMovies(topMoviesResponse);
+
+        // Fetch revenue stats
+        const revenueResponse = await adminAPI.getRevenueStats();
+        setRevenue(revenueResponse);
+
+      } catch (err: any) {
+        console.error("Error fetching dashboard data:", err);
+        setError(err.message || "Failed to load dashboard data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="admin-page-section">
+        <div style={{ textAlign: "center", padding: "40px" }}>
+          <p>Đang tải dữ liệu...</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="admin-page-section">
+        <div style={{ textAlign: "center", padding: "40px", color: "red" }}>
+          <p>Lỗi: {error}</p>
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="admin-page-section">
       {/* ===== STATS ===== */}
       <div className="admin-dashboard-grid">
         <div className="admin-stat-card">
           <h3>Tổng số phim</h3>
-          <p>25</p>
+          <p>{stats.totalMovies}</p>
         </div>
 
         <div className="admin-stat-card">
           <h3>Suất chiếu hôm nay</h3>
-          <p>48</p>
+          <p>{stats.totalShowtimes}</p>
         </div>
 
         <div className="admin-stat-card">
           <h3>Đơn hàng</h3>
-          <p>132</p>
+          <p>{stats.totalBookings}</p>
         </div>
 
         <div className="admin-stat-card">
           <h3>Người dùng</h3>
-          <p>560</p>
+          <p>{stats.totalUsers}</p>
         </div>
       </div>
 
@@ -104,31 +196,10 @@ export default function AdminDashboard() {
             </div>
 
             <div className="top-movie-list">
-              {[
-                {
-                  title: "Thỏ ơi!!!",
-                  sold: "1.240 vé đã bán",
-                  img: "/images/movies/phim2.jpg",
-                },
-                {
-                  title: "Nhà Bà Tôi Một Phòng",
-                  sold: "1.050 vé đã bán",
-                  img: "/images/movies/phim3.jpg",
-                },
-                {
-                  title: "Báu Vật Trời Cho",
-                  sold: "920 vé đã bán",
-                  img: "/images/movies/phim4.jpg",
-                },
-                {
-                  title: "Biệt Đội Thú Cưng",
-                  sold: "815 vé đã bán",
-                  img: "/images/movies/phim1.jpg",
-                },
-              ].map((movie, i) => (
-                <div className="top-movie-item" key={i}>
+              {topMovies.map((movie) => (
+                <div className="top-movie-item" key={movie._id}>
                   <img
-                    src={movie.img}
+                    src={movie.posterUrl || "https://placehold.co/56x56?text=Movie"}
                     alt={movie.title}
                     onError={(e) =>
                       ((e.target as HTMLImageElement).src =
@@ -137,7 +208,7 @@ export default function AdminDashboard() {
                   />
                   <div className="top-movie-info">
                     <strong>{movie.title}</strong>
-                    <span>{movie.sold}</span>
+                    <span>{movie.bookingCount} vé đã bán</span>
                   </div>
                 </div>
               ))}
@@ -155,22 +226,22 @@ export default function AdminDashboard() {
             <div className="summary-stat-list">
               <div className="summary-stat-item">
                 <span>Tổng doanh thu</span>
-                <strong>2.48 tỷ</strong>
+                <strong>{(revenue.totalRevenue / 1000000000).toFixed(2)} tỷ</strong>
               </div>
 
               <div className="summary-stat-item">
                 <span>Doanh thu vé</span>
-                <strong>1.92 tỷ</strong>
+                <strong>{(revenue.ticketRevenue / 1000000000).toFixed(2)} tỷ</strong>
               </div>
 
               <div className="summary-stat-item">
                 <span>Doanh thu bắp nước</span>
-                <strong>560 triệu</strong>
+                <strong>{(revenue.snackRevenue / 1000000).toFixed(0)} triệu</strong>
               </div>
 
               <div className="summary-stat-item">
                 <span>Tỷ lệ lấp đầy</span>
-                <strong>78%</strong>
+                <strong>{revenue.occupancyRate}%</strong>
               </div>
             </div>
 
@@ -178,7 +249,7 @@ export default function AdminDashboard() {
               <div className="mini-bar-group">
                 <label>Vé phim</label>
                 <div className="mini-bar-track">
-                  <div className="mini-bar-fill" style={{ width: "78%" }}></div>
+                  <div className="mini-bar-fill" style={{ width: `${revenue.occupancyRate}%` }}></div>
                 </div>
               </div>
 
@@ -199,7 +270,7 @@ export default function AdminDashboard() {
 
             <div className="dashboard-note-box">
               <p>
-                Hiệu suất tuần này tăng <strong>12.5%</strong> so với tuần trước.
+                Hiệu suất tuần này tăng <strong>{revenue.weeklyGrowth}%</strong> so với tuần trước.
               </p>
             </div>
           </div>

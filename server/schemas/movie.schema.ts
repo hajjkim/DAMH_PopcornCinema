@@ -1,9 +1,10 @@
-
 import mongoose, { Document, Schema } from "mongoose";
 
 export interface IMovie {
   title: string;
-  genre: string;
+  // Kept as an array to support multi-genre movies (from develop).
+  // If existing data uses a single string, a migration will be needed.
+  genres: string[];
   duration: number;
   description?: string;
   poster?: string;
@@ -13,6 +14,8 @@ export interface IMovie {
   rating?: string;
   status?: "COMING_SOON" | "NOW_SHOWING" | "ENDED";
   releaseDate?: Date;
+  trailerUrl?: string;
+  subtitle?: string;
 }
 
 export interface IMovieDocument extends IMovie, Document {}
@@ -20,12 +23,12 @@ export interface IMovieDocument extends IMovie, Document {}
 const movieSchema = new Schema<IMovieDocument>(
   {
     title: { type: String, required: true },
-    genre: { type: String, required: true },
+    genres: { type: [String], required: true },
     duration: { type: Number, required: true },
     description: String,
     poster: String,
     director: String,
-    actors: [String],
+    actors: [{ type: String }],
     language: String,
     rating: String,
     status: {
@@ -34,6 +37,8 @@ const movieSchema = new Schema<IMovieDocument>(
       default: "COMING_SOON",
     },
     releaseDate: Date,
+    trailerUrl: { type: String, default: "" },
+    subtitle: { type: String, default: "" },
   },
   { timestamps: true }
 );

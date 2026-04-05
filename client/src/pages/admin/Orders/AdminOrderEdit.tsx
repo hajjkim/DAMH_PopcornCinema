@@ -1,11 +1,43 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import "../../../styles/Admin/Orders/AdminOrder.css";
 
 export default function AdminOrderEdit() {
+  const { id } = useParams();
   const [form, setForm] = useState({
     paymentMethod: "Momo",
     status: "PAID",
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [orderCode, setOrderCode] = useState("");
+  const [customerName, setCustomerName] = useState("");
+
+  useEffect(() => {
+    const fetchOrder = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/bookings/${id}`);
+        if (!response.ok) throw new Error("Failed to fetch order");
+        const data = await response.json();
+        setOrderCode(data._id);
+        setCustomerName(data.user?.fullName || "");
+        setForm({
+          paymentMethod: data.paymentMethod || "Momo",
+          status: data.status || "PAID",
+        });
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (id) fetchOrder();
+  }, [id]);
+
+  if (loading) return <section className="admin-page-section"><p>Đang tải...</p></section>;
+  if (error) return <section className="admin-page-section"><p style={{color: 'red'}}>Lỗi: {error}</p></section>;
 
   return (
     <section className="admin-page-section">
@@ -14,12 +46,12 @@ export default function AdminOrderEdit() {
 
           <div className="admin-form-group">
             <label>Mã đơn</label>
-            <input value="ORD001" disabled />
+            <input value={orderCode} disabled />
           </div>
 
           <div className="admin-form-group">
             <label>Khách hàng</label>
-            <input value="Nguyễn Văn A" disabled />
+            <input value={customerName} disabled />
           </div>
 
           <div className="admin-form-group">

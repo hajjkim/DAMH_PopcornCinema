@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../../../styles/Admin/Movies/AdminForm.css";
+import { movieAPI } from "../../../services/movie.api";
 
 export default function AdminMovieCreate() {
   const navigate = useNavigate();
@@ -9,37 +10,32 @@ export default function AdminMovieCreate() {
     title: "",
     genre: "",
     duration: "",
-    release_date: "",
+    releaseDate: "",
     status: "NOW_SHOWING",
-    age_rating: "",
+    ageRating: "",
     director: "",
     actors: "",
     language: "",
     subtitle: "",
     description: "",
-    poster: null as File | null,
+    posterUrl: "",
   });
 
   const [errors, setErrors] = useState<any>({});
-  const [preview, setPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e: any) => {
-    const { name, value, files } = e.target;
-
-    if (name === "poster" && files?.[0]) {
-      setForm({ ...form, poster: files[0] });
-      setPreview(URL.createObjectURL(files[0]));
-    } else {
-      setForm({ ...form, [name]: value });
-    }
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
   };
 
   const validate = () => {
     const err: any = {};
 
     // Required fields
-    Object.keys(form).forEach((key) => {
-      if (key !== "poster" && !form[key as keyof typeof form]) {
+    const requiredFields = ["title", "genre", "duration", "releaseDate", "ageRating", "director"];
+    requiredFields.forEach((key) => {
+      if (!form[key as keyof typeof form]) {
         err[key] = "Không được để trống";
       }
     });
@@ -51,27 +47,46 @@ export default function AdminMovieCreate() {
 
     // Date > today
     const today = new Date();
-    const selectedDate = new Date(form.release_date);
+    const selectedDate = new Date(form.releaseDate);
 
     today.setHours(0, 0, 0, 0);
     selectedDate.setHours(0, 0, 0, 0);
 
     if (selectedDate <= today) {
-      err.release_date = "Ngày chiếu phải lớn hơn hôm nay";
+      err.releaseDate = "Ngày chiếu phải lớn hơn hôm nay";
     }
 
     setErrors(err);
     return Object.keys(err).length === 0;
   };
 
-  const handleSubmit = (e: any) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
 
     if (!validate()) return;
 
-    console.log("DATA:", form);
-
-    navigate("/admin/movies");
+    setLoading(true);
+    try {
+      await movieAPI.create({
+        title: form.title,
+        genres: form.genre ? form.genre.split(",").map((g: string) => g.trim()).filter(Boolean) : [],
+        durationMinutes: Number(form.duration),
+        releaseDate: form.releaseDate,
+        status: form.status,
+        ageRating: form.ageRating,
+        director: form.director,
+        actors: form.actors ? form.actors.split(",").map((a: string) => a.trim()).filter(Boolean) : [],
+        language: form.language,
+        description: form.description,
+        posterUrl: form.posterUrl,
+      });
+      alert("Thêm phim thành công!");
+      navigate("/admin/movies");
+    } catch (err: any) {
+      alert("Lỗi: " + (err.message || "Không thể thêm phim"));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -82,37 +97,37 @@ export default function AdminMovieCreate() {
           {/* TÊN */}
           <div className="admin-form-group">
             <label>Tên phim</label>
-            <input name="title" onChange={handleChange} />
+            <input name="title" value={form.title} onChange={handleChange} required />
             {errors.title && <span className="error">{errors.title}</span>}
           </div>
 
           {/* THỂ LOẠI */}
           <div className="admin-form-group">
             <label>Thể loại</label>
-            <input name="genre" onChange={handleChange} />
+            <input name="genre" value={form.genre} onChange={handleChange} placeholder="Hành động, Phiêu lưu, ..." required />
             {errors.genre && <span className="error">{errors.genre}</span>}
           </div>
 
           {/* THỜI LƯỢNG */}
           <div className="admin-form-group">
             <label>Thời lượng</label>
-            <input type="number" name="duration" onChange={handleChange} />
+            <input type="number" name="duration" value={form.duration} onChange={handleChange} required />
             {errors.duration && <span className="error">{errors.duration}</span>}
           </div>
 
           {/* NGÀY */}
           <div className="admin-form-group">
             <label>Ngày chiếu</label>
-            <input type="date" name="release_date" onChange={handleChange} />
-            {errors.release_date && (
-              <span className="error">{errors.release_date}</span>
+            <input type="date" name="releaseDate" value={form.releaseDate} onChange={handleChange} />
+            {errors.releaseDate && (
+              <span className="error">{errors.releaseDate}</span>
             )}
           </div>
 
           {/* STATUS */}
           <div className="admin-form-group">
             <label>Trạng thái</label>
-            <select name="status" onChange={handleChange}>
+            <select name="status" value={form.status} onChange={handleChange}>
               <option value="NOW_SHOWING">Đang chiếu</option>
               <option value="COMING_SOON">Sắp chiếu</option>
             </select>
@@ -120,21 +135,14 @@ export default function AdminMovieCreate() {
 
           {/* POSTER */}
           <div className="admin-form-group">
-            <label>Poster</label>
-            <div className="upload-box">
-              <input type="file" name="poster" onChange={handleChange} />
-              {preview ? (
-                <img src={preview} className="preview-img" />
-              ) : (
-                <span>Chọn ảnh</span>
-              )}
-            </div>
+            <label>Poster URL</label>
+            <input name="posterUrl" value={form.posterUrl} onChange={handleChange} placeholder="https://..." />
           </div>
 
           {/* PHÂN LOẠI (DROPDOWN) */}
           <div className="admin-form-group">
             <label>Phân loại</label>
-            <select name="age_rating" onChange={handleChange}>
+            <select name="ageRating" value={form.ageRating} onChange={handleChange}>
               <option value="">-- Chọn --</option>
               <option value="P">P</option>
               <option value="K">K</option>
@@ -143,15 +151,15 @@ export default function AdminMovieCreate() {
               <option value="T18">T18</option>
               <option value="C">C</option>
             </select>
-            {errors.age_rating && (
-              <span className="error">{errors.age_rating}</span>
+            {errors.ageRating && (
+              <span className="error">{errors.ageRating}</span>
             )}
           </div>
 
           {/* ĐẠO DIỄN */}
           <div className="admin-form-group">
             <label>Đạo diễn</label>
-            <input name="director" onChange={handleChange} />
+            <input name="director" value={form.director} onChange={handleChange} required />
             {errors.director && (
               <span className="error">{errors.director}</span>
             )}
@@ -160,14 +168,14 @@ export default function AdminMovieCreate() {
           {/* DIỄN VIÊN */}
           <div className="admin-form-group">
             <label>Diễn viên</label>
-            <input name="actors" onChange={handleChange} />
+            <input name="actors" value={form.actors} onChange={handleChange} />
             {errors.actors && <span className="error">{errors.actors}</span>}
           </div>
 
           {/* NGÔN NGỮ */}
           <div className="admin-form-group">
             <label>Ngôn ngữ</label>
-            <input name="language" onChange={handleChange} />
+            <input name="language" value={form.language} onChange={handleChange} />
             {errors.language && (
               <span className="error">{errors.language}</span>
             )}
@@ -176,7 +184,7 @@ export default function AdminMovieCreate() {
           {/* PHỤ ĐỀ */}
           <div className="admin-form-group">
             <label>Phụ đề</label>
-            <input name="subtitle" onChange={handleChange} />
+            <input name="subtitle" value={form.subtitle} onChange={handleChange} />
             {errors.subtitle && (
               <span className="error">{errors.subtitle}</span>
             )}
@@ -185,7 +193,7 @@ export default function AdminMovieCreate() {
           {/* MÔ TẢ */}
           <div className="admin-form-group admin-form-group-full">
             <label>Mô tả</label>
-            <textarea name="description" onChange={handleChange} />
+            <textarea name="description" value={form.description} onChange={handleChange} />
             {errors.description && (
               <span className="error">{errors.description}</span>
             )}
@@ -201,8 +209,8 @@ export default function AdminMovieCreate() {
               Hủy
             </button>
 
-            <button className="admin-btn admin-btn-primary">
-              Lưu phim
+            <button type="submit" disabled={loading} className="admin-btn admin-btn-primary">
+              {loading ? "Đang lưu..." : "Lưu phim"}
             </button>
           </div>
         </form>

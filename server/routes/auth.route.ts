@@ -1,35 +1,26 @@
 import { Router } from "express";
-import { login, register } from "../services/auth.service";
+import { register, login } from "../services/auth.service";
+import { validateRegister, validateLogin } from "../middlewares/validate.middleware";
 
 const router = Router();
 
-router.post("/register", async (req, res) => {
+// Đăng ký
+router.post("/register", validateRegister, async (req, res) => {
+  const { fullName, email, password } = req.body;
   try {
-    const { fullName, email, password } = req.body;
-
-    if (!fullName || !email || !password) {
-      res.status(400).json({ message: "fullName, email, password are required" });
-      return;
-    }
-
-    if (String(password).length < 6) {
-      res.status(400).json({ message: "Password must be at least 6 characters" });
-      return;
-    }
-
-    const result = await register({
-      fullName: String(fullName),
-      email: String(email),
-      password: String(password),
-    });
-
-    res.status(201).json(result);
+    const user = await register({ fullName, email, password });
+    res.status(201).json(user);
   } catch (err: any) {
-    res.status(400).json({ message: err.message || "Register failed" });
+    // Handle MongoDB duplicate key error
+    if (err.code === 11000) {
+      return res.status(400).json({ message: "Email đã được sử dụng. Vui lòng dùng email khác" });
+    }
+    res.status(400).json({ message: err.message });
   }
 });
 
-router.post("/login", async (req, res) => {
+// Đăng nhập
+router.post("/login", validateLogin, async (req, res) => {
   try {
     const { email, password } = req.body;
 

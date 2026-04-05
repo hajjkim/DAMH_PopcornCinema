@@ -31,6 +31,7 @@ export default function LoginPage() {
 
     if (!form.email || !form.password) {
       setError("❌ Vui lòng nhập đầy đủ thông tin");
+      setLoading(false);
       return;
     }
 
@@ -93,6 +94,7 @@ export default function LoginPage() {
                   placeholder="Nhập email..."
                   value={form.email}
                   onChange={handleChange}
+                  disabled={loading}
                 />
               </div>
 
@@ -104,6 +106,7 @@ export default function LoginPage() {
                   placeholder="Nhập mật khẩu..."
                   value={form.password}
                   onChange={handleChange}
+                  disabled={loading}
                 />
               </div>
 
