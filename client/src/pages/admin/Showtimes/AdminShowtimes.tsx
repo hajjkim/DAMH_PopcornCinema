@@ -73,6 +73,26 @@ export default function AdminShowtimes() {
       );
     }
 
+    // Sort: Currently showing first, then by newest showtimes
+    const now = new Date();
+    filtered.sort((a, b) => {
+      const aStart = new Date(a.startTime);
+      const aEnd = new Date(a.endTime);
+      const bStart = new Date(b.startTime);
+      const bEnd = new Date(b.endTime);
+
+      // Check if currently showing
+      const aIsShowing = aStart <= now && now <= aEnd;
+      const bIsShowing = bStart <= now && now <= bEnd;
+
+      // Currently showing comes first
+      if (aIsShowing && !bIsShowing) return -1;
+      if (!aIsShowing && bIsShowing) return 1;
+
+      // If both showing or both not showing, sort by newest (startTime descending)
+      return bStart.getTime() - aStart.getTime();
+    });
+
     setFilteredShowtimes(filtered);
     setCurrentPage(1); // Reset to first page when filters change
   }, [filterMovie, filterCinema, filterDate, showtimes]);
@@ -175,25 +195,32 @@ export default function AdminShowtimes() {
           <tbody>
             {paginatedShowtimes.map((s) => {
               const getMovieTitle = () => {
-                if (s.movie?.title) return s.movie.title;
                 if (typeof s.movieId === "object" && s.movieId?.title) return s.movieId.title;
+                if (s.movie?.title) return s.movie.title;
                 return "Unknown Movie";
               };
 
               const getCinemaName = () => {
+                if (typeof s.auditoriumId === "object" && s.auditoriumId?.cinemaId?.name) 
+                  return s.auditoriumId.cinemaId.name;
                 if (s.auditorium?.cinemaId?.name) return s.auditorium.cinemaId.name;
-                if (typeof s.auditoriumId === "object" && s.auditoriumId?.cinemaId?.name) return s.auditoriumId.cinemaId.name;
                 return "N/A";
               };
 
               const getAuditoriumName = () => {
-                if (s.auditorium?.name) return s.auditorium.name;
                 if (typeof s.auditoriumId === "object" && s.auditoriumId?.name) return s.auditoriumId.name;
+                if (s.auditorium?.name) return s.auditorium.name;
                 return typeof s.auditoriumId === "string" ? s.auditoriumId : "Unknown";
               };
 
+              // Check if currently showing
+              const now = new Date();
+              const startTime = new Date(s.startTime);
+              const endTime = new Date(s.endTime);
+              const isCurrentlyShowing = startTime <= now && now <= endTime;
+
               return (
-                <tr key={s._id}>
+                <tr key={s._id} style={isCurrentlyShowing ? { backgroundColor: "#fff3cd" } : {}}>
                   <td>{s._id}</td>
                   <td>{getMovieTitle()}</td>
                   <td>{getCinemaName()}</td>
@@ -202,9 +229,16 @@ export default function AdminShowtimes() {
                   <td>{new Date(s.startTime).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })} - {new Date(s.endTime).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</td>
                   <td>{s.format || "2D"}</td>
                   <td>
-                    <span className={`admin-badge ${s.status === "OPEN" ? "admin-badge-success" : "admin-badge-danger"}`}>
-                      {s.status === "OPEN" ? "Đang mở bán" : "Đã đóng"}
-                    </span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                      {isCurrentlyShowing && (
+                        <span className="admin-badge admin-badge-warning">
+                          🔴 Đang chiếu
+                        </span>
+                      )}
+                      <span className={`admin-badge ${s.status === "OPEN" ? "admin-badge-success" : "admin-badge-danger"}`}>
+                        {s.status === "OPEN" ? "Đang mở bán" : "Đã đóng"}
+                      </span>
+                    </div>
                   </td>
                   <td>
                     <div className="admin-table-actions">

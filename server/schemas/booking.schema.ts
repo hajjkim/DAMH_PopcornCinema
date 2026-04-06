@@ -2,8 +2,9 @@
 import mongoose, { Document, Schema } from "mongoose";
 
 export interface IBooking {
-  userId: string;
-  showtimeId: string;
+  user: mongoose.Types.ObjectId;
+  showtime: mongoose.Types.ObjectId;
+  bookingCode: string;
   seats: string[];
   snacks?: { snackId: string; qty: number }[];
   promotionCode?: string;
@@ -16,8 +17,9 @@ export interface IBooking {
 export interface IBookingDocument extends IBooking, Document {}
 
 const bookingSchema = new Schema<IBookingDocument>({
-  userId: { type: String, required: true },
-  showtimeId: { type: String, required: true },
+  user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  showtime: { type: Schema.Types.ObjectId, ref: "Showtime", required: true },
+  bookingCode: { type: String, required: true, unique: true, trim: true },
   seats: { type: [String], required: true },
   snacks: [{ snackId: String, qty: Number }],
   promotionCode: String,
@@ -30,6 +32,7 @@ const bookingSchema = new Schema<IBookingDocument>({
 
 // Helper index to query expiring payments quickly
 bookingSchema.index({ paymentExpiresAt: 1 });
-bookingSchema.index({ showtimeId: 1, seats: 1 });
+bookingSchema.index({ showtime: 1, seats: 1 });
+bookingSchema.index({ bookingCode: 1 }, { unique: true });
 
 export const Booking = mongoose.models.Booking || mongoose.model<IBookingDocument>("Booking", bookingSchema);

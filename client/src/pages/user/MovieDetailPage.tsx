@@ -118,7 +118,7 @@ export default function MovieDetailPage() {
 
             <div className="movie-info-list">
               <p>
-                <strong>Thể loại:</strong> {movie.genre}
+                <strong>Thể loại:</strong> {(movie.genres || []).join(", ")}
               </p>
               <p>
                 <strong>Thời lượng:</strong>{" "}

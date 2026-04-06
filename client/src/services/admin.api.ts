@@ -1,4 +1,4 @@
-import { apiClient } from "./api";
+import { apiClient, apiRequest } from "./api";
 
 export const adminAPI = {
   getStats: () => apiClient.get("/admin/stats"),
@@ -23,22 +23,24 @@ export const adminAPI = {
   getMoviesReport: () => apiClient.get("/admin/movies/report"),
 
   getSnacksReport: () => apiClient.get("/admin/snacks/report"),
+
+  getPaymentsReport: () => apiClient.get("/admin/payments/report"),
 };
 
 export const userAPI = {
   getAll: () => apiClient.get("/users"),
 
-  getById: (id: string) => apiClient.get(`/users/${id}`),
+  getById: (id: string) => apiClient.get(`/users/admin/${id}`),
 
-  update: (id: string, data: any) => apiClient.put(`/users/${id}`, data),
+  update: (id: string, data: any) => apiClient.put(`/users/admin/${id}`, data),
 
-  delete: (id: string) => apiClient.delete(`/users/${id}`),
+  delete: (id: string) => apiClient.delete(`/users/admin/${id}`),
 
   changeRole: (id: string, role: string) =>
-    apiClient.patch(`/users/${id}/role`, { role }),
+    apiClient.patch(`/users/admin/${id}/role`, { role }),
 
   changeStatus: (id: string, status: string) =>
-    apiClient.patch(`/users/${id}/status`, { status }),
+    apiClient.patch(`/users/admin/${id}/status`, { status }),
 };
 
 export const promotionAPI = {
@@ -59,6 +61,17 @@ export const promotionAPI = {
   create: (data: any) => apiClient.post("/promotions", data),
 
   update: (id: string, data: any) => apiClient.put(`/promotions/${id}`, data),
+
+  updateWithFile: (id: string, data: any, imageFile: File) => {
+    const formData = new FormData();
+    formData.append("image", imageFile);
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+    return apiRequest(`/promotions/${id}`, { method: "PUT", body: formData, auth: true });
+  },
 
   delete: (id: string) => apiClient.delete(`/promotions/${id}`),
 
@@ -104,6 +117,19 @@ export const movieAPI = {
 
   update: (id: string, data: any) => apiClient.put(`/movies/${id}`, data),
 
+  updateWithFile: (id: string, data: any, posterFile: File) => {
+    const formData = new FormData();
+    formData.append("poster", posterFile);
+    Object.entries(data).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        formData.append(key, JSON.stringify(value));
+      } else if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+    return apiRequest(`/movies/${id}`, { method: "PUT", body: formData, auth: true });
+  },
+
   delete: (id: string) => apiClient.delete(`/movies/${id}`),
 };
 
@@ -120,17 +146,17 @@ export const showtimeAPI = {
 };
 
 export const bookingAPI = {
-  getAll: () => apiClient.get("/bookings"),
+  getAll: () => apiClient.get("/bookings/admin/all"),
 
-  getById: (id: string) => apiClient.get(`/bookings/${id}`),
+  getById: (id: string) => apiClient.get(`/bookings/admin/${id}`),
 
   getByUser: (userId: string) => apiClient.get(`/bookings/user/${userId}`),
 
   create: (data: any) => apiClient.post("/bookings", data),
 
-  update: (id: string, data: any) => apiClient.put(`/bookings/${id}`, data),
+  update: (id: string, data: any) => apiClient.put(`/bookings/admin/${id}`, data),
 
-  delete: (id: string) => apiClient.delete(`/bookings/${id}`),
+  delete: (id: string) => apiClient.delete(`/bookings/admin/${id}`),
 
   cancel: (id: string) => apiClient.patch(`/bookings/${id}/cancel`, {}),
 };

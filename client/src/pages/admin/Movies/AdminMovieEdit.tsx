@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "../../../styles/Admin/Movies/AdminForm.css";
 import { movieAPI } from "../../../services/admin.api";
@@ -13,7 +13,6 @@ export default function AdminMovieEdit() {
     duration: "",
     releaseDate: "",
     status: "NOW_SHOWING",
-    posterUrl: "",
     ageRating: "",
     director: "",
     actors: "",
@@ -22,6 +21,11 @@ export default function AdminMovieEdit() {
     trailerUrl: "",
     description: "",
   });
+
+  const [posterFile, setPosterFile] = useState<File | null>(null);
+  const [posterPreview, setPosterPreview] = useState(""); // existing URL from DB
+  const [localPreview, setLocalPreview] = useState("");   // blob URL for new file
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -35,11 +39,10 @@ export default function AdminMovieEdit() {
         setForm({
           title: movie.title || "",
           genre: movie.genres?.join(", ") || "",
-          duration: movie.durationMinutes || "",
+          duration: movie.duration || "",
           releaseDate: movie.releaseDate ? new Date(movie.releaseDate).toISOString().split('T')[0] : "",
           status: movie.status || "NOW_SHOWING",
-          posterUrl: movie.posterUrl || "",
-          ageRating: movie.ageRating || "",
+          ageRating: movie.rating || "",
           director: movie.director || "",
           actors: movie.actors?.join(", ") || "",
           language: movie.language || "",
@@ -47,6 +50,7 @@ export default function AdminMovieEdit() {
           trailerUrl: movie.trailerUrl || "",
           description: movie.description || "",
         });
+        setPosterPreview(movie.poster || "");
       } catch (err: any) {
         console.error("Error fetching movie:", err);
         setError(err.message || "Không thể tải dữ liệu phim");
@@ -62,6 +66,17 @@ export default function AdminMovieEdit() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setPosterFile(file);
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setLocalPreview(url);
+    } else {
+      setLocalPreview("");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
@@ -70,21 +85,26 @@ export default function AdminMovieEdit() {
     setError("");
 
     try {
-      await movieAPI.update(id, {
+      const payload = {
         title: form.title,
         genres: form.genre ? form.genre.split(",").map((g: string) => g.trim()).filter(Boolean) : [],
-        durationMinutes: Number(form.duration),
+        duration: Number(form.duration),
         releaseDate: form.releaseDate,
         status: form.status,
-        posterUrl: form.posterUrl,
-        ageRating: form.ageRating,
+        rating: form.ageRating,
         director: form.director,
         actors: form.actors ? form.actors.split(",").map((a: string) => a.trim()).filter(Boolean) : [],
         language: form.language,
         subtitle: form.subtitle,
         trailerUrl: form.trailerUrl,
         description: form.description,
-      });
+      };
+
+      if (posterFile) {
+        await movieAPI.updateWithFile(id, payload, posterFile);
+      } else {
+        await movieAPI.update(id, { ...payload, poster: posterPreview });
+      }
       alert("Cập nhật phim thành công!");
       navigate("/admin/movies");
     } catch (err: any) {
@@ -177,11 +197,19 @@ export default function AdminMovieEdit() {
 
           {/* POSTER */}
           <div className="admin-form-group">
-            <label>Poster URL</label>
+            <label>Poster</label>
+            {(localPreview || posterPreview) && (
+              <img
+                src={localPreview || posterPreview}
+                alt="poster preview"
+                style={{ width: "100px", borderRadius: "6px", marginBottom: "8px", display: "block", objectFit: "cover" }}
+              />
+            )}
             <input
-              name="posterUrl"
-              value={form.posterUrl}
-              onChange={handleChange}
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
             />
           </div>
 

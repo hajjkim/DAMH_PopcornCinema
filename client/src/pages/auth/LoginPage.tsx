@@ -31,13 +31,12 @@ export default function LoginPage() {
 
     if (!form.email || !form.password) {
       setError("❌ Vui lòng nhập đầy đủ thông tin");
-      setLoading(false);
       return;
     }
 
-    try {
-      setLoading(true);
+    setLoading(true);
 
+    try {
       const data = await loginApi(form.email, form.password);
 
       saveAuth(data.token, {
@@ -56,6 +55,7 @@ export default function LoginPage() {
         navigate("/");
       }
     } catch (err: any) {
+
       setError(err.message || "❌ Sai email hoặc mật khẩu");
     } finally {
       setLoading(false);
@@ -111,7 +111,6 @@ export default function LoginPage() {
               </div>
 
               {error && <p className="login-error">{error}</p>}
-
               <button className="login-btn" disabled={loading}>
                 {loading ? "Đang đăng nhập..." : "Đăng nhập"}
               </button>

@@ -31,7 +31,7 @@ export const authenticate = async (
     }
 
     (req as any).auth = {
-      userId: user.id,
+      userId: user._id.toString(),
       role: user.role,
     };
 

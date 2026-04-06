@@ -55,6 +55,18 @@ export const movieAPI = {
   update: async (id: string, data: any) => {
     return apiRequest(`/movies/${id}`, { method: "PUT", body: JSON.stringify(data) });
   },
+  updateWithFile: async (id: string, data: any, posterFile: File) => {
+    const formData = new FormData();
+    formData.append("poster", posterFile);
+    Object.entries(data).forEach(([key, val]) => {
+      if (Array.isArray(val)) {
+        formData.append(key, JSON.stringify(val));
+      } else if (val !== undefined && val !== null) {
+        formData.append(key, String(val));
+      }
+    });
+    return apiRequest(`/movies/${id}`, { method: "PUT", body: formData, auth: true });
+  },
   delete: async (id: string) => {
     return apiRequest(`/movies/${id}`, { method: "DELETE" });
   },

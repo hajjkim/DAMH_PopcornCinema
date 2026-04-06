@@ -70,15 +70,15 @@ export default function AdminMovieCreate() {
       await movieAPI.create({
         title: form.title,
         genres: form.genre ? form.genre.split(",").map((g: string) => g.trim()).filter(Boolean) : [],
-        durationMinutes: Number(form.duration),
+        duration: Number(form.duration),
         releaseDate: form.releaseDate,
         status: form.status,
-        ageRating: form.ageRating,
+        rating: form.ageRating,
         director: form.director,
         actors: form.actors ? form.actors.split(",").map((a: string) => a.trim()).filter(Boolean) : [],
         language: form.language,
         description: form.description,
-        posterUrl: form.posterUrl,
+        poster: form.posterUrl,
       });
       alert("Thêm phim thành công!");
       navigate("/admin/movies");

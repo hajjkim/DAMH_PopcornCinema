@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { upload } from "../middlewares/upload.middleware";
 import {
     getAllMovies,
     getMovieById,
@@ -39,9 +40,19 @@ router.post("/", async (req, res) => {
     }
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", upload.single("poster"), async (req, res) => {
     try {
-        const movie = await updateMovie(req.params.id, req.body);
+        const body = { ...req.body };
+        if ((req as any).file) {
+            body.poster = `http://localhost:5000/uploads/${(req as any).file.filename}`;
+        }
+        // Parse JSON-stringified array fields sent via FormData
+        for (const key of ["genres", "actors"]) {
+            if (typeof body[key] === "string") {
+                try { body[key] = JSON.parse(body[key]); } catch {}
+            }
+        }
+        const movie = await updateMovie(req.params.id as string, body);
         res.status(200).json(movie);
     } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";

@@ -13,7 +13,7 @@ export default function Header() {
 
   // Check localStorage cho user
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    const storedUser = localStorage.getItem("currentUser");
     const storedToken = localStorage.getItem("token");
     
     if (storedUser && storedToken) {
@@ -24,7 +24,7 @@ export default function Header() {
 
     // Listen for storage changes (login/logout from other tabs)
     const handleStorageChange = () => {
-      const updatedUser = localStorage.getItem("user");
+      const updatedUser = localStorage.getItem("currentUser");
       const updatedToken = localStorage.getItem("token");
       
       if (updatedUser && updatedToken) {
@@ -93,6 +93,11 @@ export default function Header() {
                 className="nav-user-trigger"
                 onClick={() => setOpen(!open)}
               >
+                <img
+                  src={user.avatar || "https://via.placeholder.com/32?text=U"}
+                  alt="avatar"
+                  className="nav-user-avatar"
+                />
                 Xin chào, {user.fullName}
               </button>
 
@@ -100,6 +105,9 @@ export default function Header() {
                 <div className="nav-user-dropdown">
                   <Link to="/profile" onClick={() => setOpen(false)}>
                     Thông tin cá nhân
+                  </Link>
+                  <Link to="/booking-history" onClick={() => setOpen(false)}>
+                    Lịch sử giao dịch
                   </Link>
 
                   {user.role === "ADMIN" && (

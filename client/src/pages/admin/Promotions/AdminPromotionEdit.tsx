@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "../../../styles/Admin/Promotions/AdminPromotion.css";
 import { promotionAPI } from "../../../services/admin.api";
@@ -20,8 +20,12 @@ export default function AdminPromotionEdit() {
     startDate: "",
     endDate: "",
     status: "ACTIVE",
-    imageUrl: "",
   });
+
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState("");   // existing URL from DB
+  const [localPreview, setLocalPreview] = useState("");    // blob URL for new file
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -45,8 +49,8 @@ export default function AdminPromotionEdit() {
           startDate: promotion.startDate ? new Date(promotion.startDate).toISOString().split('T')[0] : "",
           endDate: promotion.endDate ? new Date(promotion.endDate).toISOString().split('T')[0] : "",
           status: promotion.status || "ACTIVE",
-          imageUrl: promotion.imageUrl || "",
         });
+        setImagePreview(promotion.imageUrl || "");
       } catch (err: any) {
         console.error("Error fetching promotion:", err);
         setError(err.message || "Không thể tải dữ liệu khuyến mãi");
@@ -62,6 +66,16 @@ export default function AdminPromotionEdit() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setImageFile(file);
+    if (file) {
+      setLocalPreview(URL.createObjectURL(file));
+    } else {
+      setLocalPreview("");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
@@ -70,7 +84,12 @@ export default function AdminPromotionEdit() {
     setError("");
 
     try {
-      await promotionAPI.update(id, form);
+      const { ...payload } = form;
+      if (imageFile) {
+        await promotionAPI.updateWithFile(id, payload, imageFile);
+      } else {
+        await promotionAPI.update(id, { ...payload, imageUrl: imagePreview });
+      }
       alert("Cập nhật khuyến mãi thành công!");
       navigate("/admin/promotions");
     } catch (err: any) {
@@ -243,11 +262,19 @@ export default function AdminPromotionEdit() {
           </div>
 
           <div className="admin-form-group admin-form-group-full">
-            <label>Hình ảnh URL</label>
+            <label>Hình ảnh</label>
+            {(localPreview || imagePreview) && (
+              <img
+                src={localPreview || imagePreview}
+                alt="preview"
+                style={{ width: "160px", borderRadius: "8px", marginBottom: "8px", display: "block", objectFit: "cover" }}
+              />
+            )}
             <input
-              name="imageUrl"
-              value={form.imageUrl}
-              onChange={handleChange}
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
             />
           </div>
 

@@ -17,6 +17,7 @@ type BookingState = {
   seats?: string[];
   totalPrice?: number;
   showtimeId?: string;
+  seatHoldId?: string;
 };
 
 type SnackLine = {
@@ -98,6 +99,7 @@ export default function SnacksPage() {
         drinkChoiceMap,
         qrImage,
         showtimeId: bookingInfo.showtimeId,
+        seatHoldId: bookingInfo.seatHoldId,
       },
     });
   };

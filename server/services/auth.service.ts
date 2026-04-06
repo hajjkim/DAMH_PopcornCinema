@@ -44,7 +44,7 @@ export const register = async ({ fullName, email, password }: RegisterInput) => 
   });
 
   const token = signAccessToken({
-    userId: newUser.id,
+    userId: newUser._id.toString(),
     role: newUser.role,
   });
 
@@ -73,7 +73,7 @@ export const login = async ({ email, password }: LoginInput) => {
   }
 
   const token = signAccessToken({
-    userId: user.id,
+    userId: user._id.toString(),
     role: user.role,
   });
 

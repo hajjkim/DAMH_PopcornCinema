@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authenticate, authorize } from "../middlewares/auth.middleware";
 import {
     getAllAuditoriums,
     getAuditoriumById,
@@ -9,6 +10,7 @@ import {
 
 const router = Router();
 
+// Public routes
 router.get("/", async (_req, res) => {
     try {
         const auditoriums = await getAllAuditoriums();
@@ -29,7 +31,8 @@ router.get("/:id", async (req, res) => {
     }
 });
 
-router.post("/", async (req, res) => {
+// Admin routes
+router.post("/", authenticate, authorize("ADMIN"), async (req, res) => {
     try {
         const auditorium = await createAuditorium(req.body);
         res.status(201).json(auditorium);
@@ -39,9 +42,9 @@ router.post("/", async (req, res) => {
     }
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", authenticate, authorize("ADMIN"), async (req, res) => {
     try {
-        const auditorium = await updateAuditorium(req.params.id, req.body);
+        const auditorium = await updateAuditorium(String(req.params.id), req.body);
         res.status(200).json(auditorium);
     } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
@@ -49,9 +52,9 @@ router.put("/:id", async (req, res) => {
     }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authenticate, authorize("ADMIN"), async (req, res) => {
     try {
-        await deleteAuditorium(req.params.id);
+        await deleteAuditorium(String(req.params.id));
         res.status(200).json({ message: "Auditorium deleted successfully" });
     } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";

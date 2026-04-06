@@ -1,6 +1,7 @@
 import { SeatHold } from "../schemas/seat-hold.schema";
 import { Showtime } from "../schemas/showtime.schema";
 import { Booking } from "../schemas/booking.schema";
+import { Seat } from "../schemas/seat.schema";
 
 export const createSeatHold = async (
   userId: string,
@@ -17,7 +18,11 @@ export const createSeatHold = async (
     throw new Error("Showtime not found");
   }
 
-  const invalidSeats = seats.filter((seat) => !showtime.seatLayout.includes(seat));
+  // Get all valid seats for the auditorium
+  const validSeats = await Seat.find({ auditoriumId: showtime.auditoriumId }).lean();
+  const validSeatIds = validSeats.map((s) => s._id.toString());
+
+  const invalidSeats = seats.filter((seat) => !validSeatIds.includes(seat));
   if (invalidSeats.length > 0) {
     throw new Error(`Invalid seats: ${invalidSeats.join(", ")}`);
   }

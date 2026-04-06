@@ -57,6 +57,11 @@
   color: #f87171;
 }
 
+.admin-badge-warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
 /* ===== CARD GRID (OPTIONAL MOBILE VIEW) ===== */
 .admin-showtime-grid {
   display: grid;

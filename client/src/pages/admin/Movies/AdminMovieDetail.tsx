@@ -83,7 +83,7 @@ export default function AdminMovieDetail() {
         {/* POSTER */}
         <div className="movie-detail-poster">
           <img
-            src={movie.posterUrl || "/images/movies/default.jpg"}
+            src={movie.poster || "/images/movies/default.jpg"}
             alt={movie.title}
           />
         </div>
@@ -93,9 +93,9 @@ export default function AdminMovieDetail() {
           <h2>{movie.title}</h2>
 
           <p><strong>Thể loại:</strong> {movie.genres?.join(", ")}</p>
-          <p><strong>Thời lượng:</strong> {movie.durationMinutes} phút</p>
+          <p><strong>Thời lượng:</strong> {movie.duration} phút</p>
           <p><strong>Ngày khởi chiếu:</strong> {movie.releaseDate ? new Date(movie.releaseDate).toLocaleDateString("vi-VN") : "N/A"}</p>
-          <p><strong>Phân loại:</strong> {movie.ageRating}</p>
+          <p><strong>Phân loại:</strong> {movie.rating}</p>
           <p><strong>Đạo diễn:</strong> {movie.director}</p>
           <p><strong>Diễn viên:</strong> {movie.actors?.join(", ")}</p>
           <p><strong>Ngôn ngữ:</strong> {movie.language}</p>

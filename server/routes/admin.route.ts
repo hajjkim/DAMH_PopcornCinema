@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../middlewares/auth.middleware";
-import { getAdminStats, getUsersReport, getTopMovies, getRevenueStats, getMoviesReport, getSnacksReport } from "../services/admin.service";
+import { getAdminStats, getUsersReport, getTopMovies, getRevenueStats, getMoviesReport, getSnacksReport, getPaymentsReport } from "../services/admin.service";
 
 const router = Router();
 
@@ -74,6 +74,17 @@ router.get("/movies/report", async (_req, res) => {
 router.get("/snacks/report", async (_req, res) => {
   try {
     const report = await getSnacksReport();
+    res.status(200).json(report);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ message });
+  }
+});
+
+// Get payments report
+router.get("/payments/report", async (_req, res) => {
+  try {
+    const report = await getPaymentsReport();
     res.status(200).json(report);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

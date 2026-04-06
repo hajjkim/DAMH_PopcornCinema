@@ -1,0 +1,662 @@
+{
+  "info": {
+    "name": "Popcorn Cinema - Booking Onward",
+    "_postman_id": "popcorn-cinema-booking-onward",
+    "description": "Bookings, Payments, Promotions, Saved Promotions, Snacks, Admin Dashboard",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000", "type": "string" },
+    { "key": "token", "value": "", "type": "string", "description": "Bearer token từ /api/auth/login" },
+    { "key": "adminToken", "value": "", "type": "string", "description": "Bearer token của Admin" },
+    { "key": "bookingId", "value": "", "type": "string" },
+    { "key": "paymentId", "value": "", "type": "string" },
+    { "key": "promotionId", "value": "", "type": "string" },
+    { "key": "promotionCode", "value": "SUMMER20", "type": "string" },
+    { "key": "snackId", "value": "", "type": "string" },
+    { "key": "showtimeId", "value": "", "type": "string" },
+    { "key": "seatHoldId", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "🎟️ BOOKINGS",
+      "item": [
+        {
+          "name": "POST Create Booking",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/bookings/", "host": ["{{baseUrl}}"], "path": ["api", "bookings", ""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"showtimeId\": \"{{showtimeId}}\",\n  \"seats\": [\"A1\", \"A2\"],\n  \"snacks\": [\n    { \"snackId\": \"{{snackId}}\", \"qty\": 2 }\n  ],\n  \"promotionCode\": \"SUMMER20\",\n  \"ticketTotal\": 180000,\n  \"snackTotal\": 60000,\n  \"finalTotal\": 192000,\n  \"seatHoldId\": \"{{seatHoldId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "GET My Bookings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/bookings/me", "host": ["{{baseUrl}}"], "path": ["api", "bookings", "me"] }
+          }
+        },
+        {
+          "name": "GET Booking by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/bookings/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["api", "bookings", "{{bookingId}}"] }
+          }
+        },
+        {
+          "name": "[Admin] GET All Bookings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/bookings/admin/all", "host": ["{{baseUrl}}"], "path": ["api", "bookings", "admin", "all"] }
+          }
+        },
+        {
+          "name": "[Admin] GET Booking by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/bookings/admin/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["api", "bookings", "admin", "{{bookingId}}"] }
+          }
+        },
+        {
+          "name": "[Admin] PATCH Booking Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/bookings/admin/{{bookingId}}/status", "host": ["{{baseUrl}}"], "path": ["api", "bookings", "admin", "{{bookingId}}", "status"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"confirmed\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "status: pending_payment | pending_confirmation | confirmed | failed"
+          }
+        },
+        {
+          "name": "[Admin] PUT Update Booking",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/bookings/admin/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["api", "bookings", "admin", "{{bookingId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"cancelled\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "[Admin] DELETE Booking",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/bookings/admin/{{bookingId}}", "host": ["{{baseUrl}}"], "path": ["api", "bookings", "admin", "{{bookingId}}"] }
+          }
+        },
+        {
+          "name": "GET Debug Sample",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/bookings/debug/sample", "host": ["{{baseUrl}}"], "path": ["api", "bookings", "debug", "sample"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "💰 PAYMENTS",
+      "item": [
+        {
+          "name": "GET Payment Config",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/payments/config", "host": ["{{baseUrl}}"], "path": ["api", "payments", "config"] }
+          }
+        },
+        {
+          "name": "GET My Transactions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/payments/transactions/me", "host": ["{{baseUrl}}"], "path": ["api", "payments", "transactions", "me"] }
+          }
+        },
+        {
+          "name": "POST SePay Init",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/payments/sepay/init", "host": ["{{baseUrl}}"], "path": ["api", "payments", "sepay", "init"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_invoice_number\": \"PC20260406-ABCD\",\n  \"order_amount\": 192000,\n  \"order_description\": \"Thanh toan ve xem phim\",\n  \"success_url\": \"http://localhost:5173/payment/success\",\n  \"error_url\": \"http://localhost:5173/payment/error\",\n  \"cancel_url\": \"http://localhost:5173/payment/cancel\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST SePay Verify",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/payments/sepay/verify", "host": ["{{baseUrl}}"], "path": ["api", "payments", "sepay", "verify"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"{{bookingId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST Webhook (manual mark paid)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "x-webhook-secret", "value": "YOUR_WEBHOOK_SECRET" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/payments/webhook", "host": ["{{baseUrl}}"], "path": ["api", "payments", "webhook"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderCode\": \"PC20260406-ABCD\",\n  \"status\": \"PAID\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "[Admin] GET All Payments",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/payments/admin/all", "host": ["{{baseUrl}}"], "path": ["api", "payments", "admin", "all"] }
+          }
+        },
+        {
+          "name": "[Admin] GET Payment Stats",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/payments/admin/stats", "host": ["{{baseUrl}}"], "path": ["api", "payments", "admin", "stats"] }
+          }
+        },
+        {
+          "name": "[Admin] GET Payments by User",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/payments/admin/user/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api", "payments", "admin", "user", "{{userId}}"] }
+          }
+        },
+        {
+          "name": "[Admin] GET Payment by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/payments/admin/{{paymentId}}", "host": ["{{baseUrl}}"], "path": ["api", "payments", "admin", "{{paymentId}}"] }
+          }
+        },
+        {
+          "name": "[Admin] POST Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/payments/admin", "host": ["{{baseUrl}}"], "path": ["api", "payments", "admin"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"{{bookingId}}\",\n  \"orderCode\": \"PC20260406-ABCD\",\n  \"amount\": 192000,\n  \"status\": \"PENDING\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "[Admin] PUT Update Payment",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/payments/admin/{{paymentId}}", "host": ["{{baseUrl}}"], "path": ["api", "payments", "admin", "{{paymentId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PAID\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "[Admin] POST Refund",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/payments/admin/{{paymentId}}/refund", "host": ["{{baseUrl}}"], "path": ["api", "payments", "admin", "{{paymentId}}", "refund"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Yêu cầu hoàn tiền từ khách hàng\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎫 PROMOTIONS",
+      "item": [
+        {
+          "name": "GET All Promotions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/promotions/", "host": ["{{baseUrl}}"], "path": ["api", "promotions", ""] }
+          }
+        },
+        {
+          "name": "GET Active Promotions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/promotions/active", "host": ["{{baseUrl}}"], "path": ["api", "promotions", "active"] }
+          }
+        },
+        {
+          "name": "GET Promotion by Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/promotions/code/{{promotionCode}}", "host": ["{{baseUrl}}"], "path": ["api", "promotions", "code", "{{promotionCode}}"] }
+          }
+        },
+        {
+          "name": "GET Promotion by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/promotions/{{promotionId}}", "host": ["{{baseUrl}}"], "path": ["api", "promotions", "{{promotionId}}"] }
+          }
+        },
+        {
+          "name": "POST Validate Promotion Code",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/promotions/validate/{{promotionCode}}", "host": ["{{baseUrl}}"], "path": ["api", "promotions", "validate", "{{promotionCode}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderValue\": 180000\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "POST Calculate Discount",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/promotions/{{promotionId}}/calculate-discount", "host": ["{{baseUrl}}"], "path": ["api", "promotions", "{{promotionId}}", "calculate-discount"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderValue\": 180000\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "[Admin] POST Create Promotion",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/promotions/", "host": ["{{baseUrl}}"], "path": ["api", "promotions", ""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"SUMMER20\",\n  \"title\": \"Khuyến mãi hè 2026\",\n  \"description\": \"Giảm 20% tối đa 50k\",\n  \"discountType\": \"PERCENTAGE\",\n  \"discountValue\": 20,\n  \"maxDiscount\": 50000,\n  \"minOrderValue\": 100000,\n  \"usageLimit\": 100,\n  \"applicableTo\": \"ALL\",\n  \"startDate\": \"2026-06-01T00:00:00.000Z\",\n  \"endDate\": \"2026-08-31T23:59:59.000Z\",\n  \"status\": \"ACTIVE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "discountType: PERCENTAGE | FIXED_AMOUNT\napplicableTo: ALL | TICKETS | SNACKS | BOTH"
+          }
+        },
+        {
+          "name": "[Admin] PUT Update Promotion (with image)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/promotions/{{promotionId}}", "host": ["{{baseUrl}}"], "path": ["api", "promotions", "{{promotionId}}"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title", "value": "Khuyến mãi hè 2026", "type": "text" },
+                { "key": "discountValue", "value": "25", "type": "text" },
+                { "key": "endDate", "value": "2026-09-30T23:59:59.000Z", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "[Admin] PATCH Increment Usage",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/promotions/{{promotionId}}/increment-usage", "host": ["{{baseUrl}}"], "path": ["api", "promotions", "{{promotionId}}", "increment-usage"] }
+          }
+        },
+        {
+          "name": "[Admin] DELETE Promotion",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/promotions/{{promotionId}}", "host": ["{{baseUrl}}"], "path": ["api", "promotions", "{{promotionId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "❤️ SAVED PROMOTIONS",
+      "item": [
+        {
+          "name": "GET My Saved Promotions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/saved-promotions/me", "host": ["{{baseUrl}}"], "path": ["api", "saved-promotions", "me"] }
+          }
+        },
+        {
+          "name": "GET My Saved Count",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/saved-promotions/me/count", "host": ["{{baseUrl}}"], "path": ["api", "saved-promotions", "me", "count"] }
+          }
+        },
+        {
+          "name": "GET Check if Saved",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/saved-promotions/{{promotionId}}/check", "host": ["{{baseUrl}}"], "path": ["api", "saved-promotions", "{{promotionId}}", "check"] }
+          }
+        },
+        {
+          "name": "POST Save Promotion",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/saved-promotions/", "host": ["{{baseUrl}}"], "path": ["api", "saved-promotions", ""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"promotionId\": \"{{promotionId}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "DELETE Unsave Promotion",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/saved-promotions/{{promotionId}}", "host": ["{{baseUrl}}"], "path": ["api", "saved-promotions", "{{promotionId}}"] }
+          }
+        },
+        {
+          "name": "[Admin] GET Saved by User",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/saved-promotions/admin/user/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api", "saved-promotions", "admin", "user", "{{userId}}"] }
+          }
+        },
+        {
+          "name": "[Admin] GET Saved Count by User",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/saved-promotions/admin/user/{{userId}}/count", "host": ["{{baseUrl}}"], "path": ["api", "saved-promotions", "admin", "user", "{{userId}}", "count"] }
+          }
+        },
+        {
+          "name": "[Admin] DELETE Saved Promotion",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/saved-promotions/admin/{{promotionId}}", "host": ["{{baseUrl}}"], "path": ["api", "saved-promotions", "admin", "{{promotionId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🍿 SNACKS",
+      "item": [
+        {
+          "name": "GET All Snacks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/snacks/", "host": ["{{baseUrl}}"], "path": ["api", "snacks", ""] }
+          }
+        },
+        {
+          "name": "GET Active Snacks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/snacks/active", "host": ["{{baseUrl}}"], "path": ["api", "snacks", "active"] }
+          }
+        },
+        {
+          "name": "GET Snacks by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/snacks/category/POPCORN",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "snacks", "category", "POPCORN"],
+              "variable": [{ "key": "category", "value": "POPCORN", "description": "POPCORN | DRINK | CANDY | HOT_FOOD | OTHER" }]
+            }
+          }
+        },
+        {
+          "name": "GET Snack by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/snacks/{{snackId}}", "host": ["{{baseUrl}}"], "path": ["api", "snacks", "{{snackId}}"] }
+          }
+        },
+        {
+          "name": "[Admin] POST Create Snack",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/snacks/", "host": ["{{baseUrl}}"], "path": ["api", "snacks", ""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bắp rang bơ lớn\",\n  \"description\": \"Bắp rang bơ size L\",\n  \"price\": 55000,\n  \"imageUrl\": \"\",\n  \"category\": \"POPCORN\",\n  \"quantity\": 100,\n  \"status\": \"ACTIVE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "category: POPCORN | DRINK | CANDY | HOT_FOOD | OTHER"
+          }
+        },
+        {
+          "name": "[Admin] PUT Update Snack",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/snacks/{{snackId}}", "host": ["{{baseUrl}}"], "path": ["api", "snacks", "{{snackId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bắp rang bơ lớn\",\n  \"price\": 60000,\n  \"status\": \"ACTIVE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "[Admin] PATCH Snack Quantity",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/snacks/{{snackId}}/quantity", "host": ["{{baseUrl}}"], "path": ["api", "snacks", "{{snackId}}", "quantity"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 50\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "[Admin] PATCH Snack Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/snacks/{{snackId}}/status", "host": ["{{baseUrl}}"], "path": ["api", "snacks", "{{snackId}}", "status"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"OUT_OF_STOCK\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "status: ACTIVE | INACTIVE | OUT_OF_STOCK"
+          }
+        },
+        {
+          "name": "[Admin] DELETE Snack",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/snacks/{{snackId}}", "host": ["{{baseUrl}}"], "path": ["api", "snacks", "{{snackId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 ADMIN DASHBOARD",
+      "item": [
+        {
+          "name": "GET Stats",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/stats", "host": ["{{baseUrl}}"], "path": ["api", "admin", "stats"] }
+          }
+        },
+        {
+          "name": "GET Top Movies",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/top-movies?limit=4",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "top-movies"],
+              "query": [{ "key": "limit", "value": "4" }]
+            }
+          }
+        },
+        {
+          "name": "GET Revenue Stats",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/revenue-stats", "host": ["{{baseUrl}}"], "path": ["api", "admin", "revenue-stats"] }
+          }
+        },
+        {
+          "name": "GET Users Report",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/report?role=USER&status=ACTIVE&limit=10&skip=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "report"],
+              "query": [
+                { "key": "role", "value": "USER" },
+                { "key": "status", "value": "ACTIVE" },
+                { "key": "limit", "value": "10" },
+                { "key": "skip", "value": "0" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET Movies Report",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/movies/report", "host": ["{{baseUrl}}"], "path": ["api", "admin", "movies", "report"] }
+          }
+        },
+        {
+          "name": "GET Snacks Report",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/snacks/report", "host": ["{{baseUrl}}"], "path": ["api", "admin", "snacks", "report"] }
+          }
+        },
+        {
+          "name": "GET Payments Report",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/admin/payments/report", "host": ["{{baseUrl}}"], "path": ["api", "admin", "payments", "report"] }
+          }
+        }
+      ]
+    }
+  ]
+}

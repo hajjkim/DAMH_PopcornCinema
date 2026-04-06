@@ -7,9 +7,9 @@ type Movie = {
   _id: string;
   title: string;
   genres: string[];
-  durationMinutes: number;
+  duration: number;
   releaseDate: string;
-  status: "NOW_SHOWING" | "COMING_SOON";
+  status: "NOW_SHOWING" | "COMING_SOON" | "ENDED";
 };
 
 export default function AdminMovies() {
@@ -131,7 +131,7 @@ export default function AdminMovies() {
                         <td>{movie._id}</td>
                         <td><strong>{movie.title}</strong></td>
                         <td>{movie.genres?.join(", ")}</td>
-                        <td>{movie.durationMinutes} phút</td>
+                        <td>{movie.duration} phút</td>
                         <td>{new Date(movie.releaseDate).toLocaleDateString("vi-VN")}</td>
                         <td>
                           {movie.status === "NOW_SHOWING" ? (

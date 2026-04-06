@@ -12,6 +12,7 @@ import { Booking } from "./schemas/booking.schema";
 import { SeatHold } from "./schemas/seat-hold.schema";
 import { Cinema } from "./schemas/cinema.schema";
 import { Auditorium } from "./schemas/auditorium.schema";
+import { Seat } from "./schemas/seat.schema";
 
 // Load .env from root folder
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
@@ -30,6 +31,10 @@ function generateSeats(rows = 8, cols = 12) {
   return seats;
 }
 
+function generateBookingCode() {
+  return `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+}
+
 async function seed() {
   await mongoose.connect(MONGO_URI);
   console.log("MongoDB connected");
@@ -45,6 +50,7 @@ async function seed() {
     SeatHold.deleteMany({}),
     Cinema.deleteMany({}),
     Auditorium.deleteMany({}),
+    Seat.deleteMany({}),
   ]);
   console.log("Old data cleared");
 
@@ -103,6 +109,33 @@ async function seed() {
     { cinemaId: cinemaDocs[7]._id, name: "Hall 1", totalRows: 8, totalColumns: 12, seatCapacity: 96 },
     { cinemaId: cinemaDocs[7]._id, name: "Hall 2", totalRows: 8, totalColumns: 12, seatCapacity: 96 },
   ]);
+
+  console.log(`${auditoriumDocs.length} auditoriums created`);
+
+  // SEATS - Generate seats for each auditorium
+  const seatDocs: any[] = [];
+  const rowNames = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+  for (const auditorium of auditoriumDocs) {
+    for (let row = 0; row < auditorium.totalRows; row++) {
+      for (let col = 1; col <= auditorium.totalColumns; col++) {
+        // Special couple seats (last row, last 2 seats)
+        const isCoupleRow = row === auditorium.totalRows - 1 && col > auditorium.totalColumns - 2;
+        
+        seatDocs.push({
+          auditoriumId: auditorium._id,
+          seatRow: rowNames[row],
+          seatNumber: col,
+          seatType: isCoupleRow ? "COUPLE" : "VIP",
+          extraPrice: isCoupleRow ? 100000 : 0,
+          status: "ACTIVE",
+        });
+      }
+    }
+  }
+
+  await Seat.insertMany(seatDocs);
+  console.log(`${seatDocs.length} seats created`);
 
   // MOVIES (updated 02/04/2026)
   const movies = await Movie.insertMany([
@@ -334,7 +367,14 @@ async function seed() {
 
   // SHOWTIMES
   const timeSlots = ["09:30", "12:30", "15:45", "19:00", "21:30"];
-  const nowShowingDates = ["2026-04-02", "2026-04-03", "2026-04-04", "2026-04-05"];
+  // Generate dates for 7 days (for NOW_SHOWING movies)
+  const nowShowingDates = [];
+  for (let d = 2; d <= 8; d++) {
+    const date = new Date("2026-04-02");
+    date.setDate(d);
+    nowShowingDates.push(date.toISOString().slice(0, 10));
+  }
+  
   const showtimes = [];
 
   const parseTime = (dateStr: string, timeStr: string) => {
@@ -354,9 +394,10 @@ async function seed() {
     const movie = movies[i];
 
     if (movie.status === "NOW_SHOWING") {
+      // For NOW_SHOWING: all 5 time slots for each day
       for (const date of nowShowingDates) {
         const dateIndex = nowShowingDates.indexOf(date);
-        for (const time of timeSlots.slice(0, 3)) {
+        for (const time of timeSlots) {
           const timeIndex = timeSlots.indexOf(time);
           const auditorium =
             auditoriumDocs[(i + dateIndex + timeIndex) % auditoriumDocs.length];
@@ -376,12 +417,19 @@ async function seed() {
         }
       }
     } else {
-      const releaseDateStr = movie.releaseDate.toISOString().slice(0, 10);
-      const plusOne = new Date(movie.releaseDate);
-      plusOne.setDate(plusOne.getDate() + 1);
-      const comingDates = [releaseDateStr, plusOne.toISOString().slice(0, 10)];
+      // For COMING_SOON: generate showtimes starting from release date
+      const releaseDate = new Date(movie.releaseDate);
+      const comingDates = [];
+      
+      // Generate 3 days starting from release date
+      for (let d = 0; d < 3; d++) {
+        const date = new Date(releaseDate);
+        date.setDate(date.getDate() + d);
+        comingDates.push(date.toISOString().slice(0, 10));
+      }
 
       for (const date of comingDates) {
+        // Afternoon and evening slots for COMING_SOON
         for (const time of timeSlots.slice(2, 5)) {
           const timeIndex = timeSlots.indexOf(time);
           const auditorium =
@@ -463,6 +511,7 @@ async function seed() {
     {
       user: users[0]._id,
       showtime: showtimes[0]._id,
+      bookingCode: generateBookingCode(),
       seats: ["A1", "A2"],
       snacks: [{ snackId: snacks[0]._id, qty: 1 }],
       promotionCode: promotions[0].code,

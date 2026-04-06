@@ -20,14 +20,15 @@ export const createAuditorium = async (data: {
     seatCapacity: number;
     status?: "ACTIVE" | "INACTIVE";
     }) => {
-    return await Auditorium.create(data);
+    const auditorium = await Auditorium.create(data);
+    return await auditorium.populate("cinemaId");
 };
 
 export const updateAuditorium = async (id: string, data: any) => {
     const auditorium = await Auditorium.findByIdAndUpdate(id, data, {
         new: true,
         runValidators: true,
-    });
+    }).populate("cinemaId");
 
     if (!auditorium) throw new Error("Auditorium not found");
     return auditorium;

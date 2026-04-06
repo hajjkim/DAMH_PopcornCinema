@@ -20,9 +20,9 @@
 /* HERO */
 .hero {
   padding: 32px 0 48px;
-  background:
-    linear-gradient(135deg, rgba(20, 30, 60, 0.96), rgba(9, 14, 28, 0.96)),
-    url("/images/banners/banner1.jpg") center/cover no-repeat;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .hero-content {
@@ -124,11 +124,29 @@
 
 .hero-slides {
   position: relative;
-  height: 460px;
-  border-radius: 24px;
+  height: 480px;
+  border-radius: 20px;
   overflow: hidden;
   background: #111827;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 20px 60px rgba(0, 0, 0, 0.55),
+    0 0 40px rgba(245, 158, 11, 0.08);
+}
+
+/* gradient overlay at bottom of each slide */
+.hero-slides::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 50%,
+    rgba(9, 14, 28, 0.55) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+  border-radius: inherit;
 }
 
 .hero-slide {
@@ -138,8 +156,8 @@
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  transform: scale(1.02);
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  transform: scale(1.04);
+  transition: opacity 0.55s ease, transform 0.55s ease;
 }
 
 .hero-slide.active {
@@ -151,20 +169,27 @@
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  border: none;
-  background: rgba(17, 24, 39, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(9, 14, 28, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: #ffffff;
-  font-size: 20px;
+  font-size: 18px;
   cursor: pointer;
   z-index: 2;
-  transition: 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .hero-nav:hover {
-  background: rgba(17, 24, 39, 0.92);
+  background: rgba(245, 158, 11, 0.85);
+  border-color: transparent;
+  transform: translateY(-50%) scale(1.08);
 }
 
 .hero-nav.prev {
@@ -178,22 +203,23 @@
 .hero-dots {
   display: flex;
   justify-content: center;
-  gap: 10px;
-  margin-top: 16px;
+  gap: 8px;
+  margin-top: 14px;
 }
 
 .hero-dot {
-  width: 11px;
-  height: 11px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.28);
   cursor: pointer;
-  transition: 0.2s ease;
+  transition: background 0.25s ease, width 0.25s ease, border-radius 0.25s ease;
 }
 
 .hero-dot.active {
+  width: 24px;
+  border-radius: 4px;
   background: #f59e0b;
-  transform: scale(1.1);
 }
 
 /* SECTIONS */

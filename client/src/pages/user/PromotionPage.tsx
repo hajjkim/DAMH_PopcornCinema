@@ -51,7 +51,7 @@ export default function PromotionPage() {
                   key={item._id}
                 >
                   <div className="promotion-image-wrap">
-                    <img src={"/images/logo/logo.png"} alt={item.code} />
+                    <img src={item.imageUrl || "/images/logo/logo.png"} alt={item.code} />
                   </div>
 
                   <div className="promotion-card-body">

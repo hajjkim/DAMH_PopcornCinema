@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authorize } from "../middlewares/auth.middleware";
+import { authenticate, authorize } from "../middlewares/auth.middleware";
 import {
   getAllSnacks,
   getSnackById,
@@ -65,7 +65,7 @@ router.get("/:id", async (req, res) => {
 // ─── Admin routes ─────────────────────────────────────────────────────────────
 
 // Create a snack
-router.post("/", authorize("ADMIN"), async (req, res) => {
+router.post("/", authenticate, authorize("ADMIN"), async (req, res) => {
   try {
     const snack = await createSnack(req.body);
     res.status(201).json(snack);
@@ -76,7 +76,7 @@ router.post("/", authorize("ADMIN"), async (req, res) => {
 });
 
 // Update a snack
-router.put("/:id", authorize("ADMIN"), async (req, res) => {
+router.put("/:id", authenticate, authorize("ADMIN"), async (req, res) => {
   try {
     const snack = await updateSnack(String(req.params.id), req.body);
     res.status(200).json(snack);
@@ -87,7 +87,7 @@ router.put("/:id", authorize("ADMIN"), async (req, res) => {
 });
 
 // Update snack quantity (e.g. inventory adjustment)
-router.patch("/:id/quantity", authorize("ADMIN"), async (req, res) => {
+router.patch("/:id/quantity", authenticate, authorize("ADMIN"), async (req, res) => {
   const { quantity } = req.body;
   try {
     const snack = await updateSnackQuantity(String(req.params.id), quantity);
@@ -99,7 +99,7 @@ router.patch("/:id/quantity", authorize("ADMIN"), async (req, res) => {
 });
 
 // Toggle snack active/inactive status
-router.patch("/:id/status", authorize("ADMIN"), async (req, res) => {
+router.patch("/:id/status", authenticate, authorize("ADMIN"), async (req, res) => {
   const { status } = req.body;
   try {
     const snack = await updateSnackStatus(String(req.params.id), status);
@@ -111,7 +111,7 @@ router.patch("/:id/status", authorize("ADMIN"), async (req, res) => {
 });
 
 // Delete a snack
-router.delete("/:id", authorize("ADMIN"), async (req, res) => {
+router.delete("/:id", authenticate, authorize("ADMIN"), async (req, res) => {
   try {
     await deleteSnack(String(req.params.id));
     res.status(200).json({ message: "Snack deleted successfully" });

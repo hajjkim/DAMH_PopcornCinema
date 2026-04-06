@@ -138,7 +138,7 @@ export const getMoviesReport = async () => {
     {
       $lookup: {
         from: "showtimes",
-        localField: "showtimeId",
+        localField: "showtime",
         foreignField: "_id",
         as: "showtime",
       },

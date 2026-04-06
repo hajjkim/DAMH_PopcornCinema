@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { verifyToken } from "../utils/jwt";
+import { verifyAccessToken } from "../utils/jwt";
 
 // Extend Express Request to include user info
 declare global {
@@ -7,7 +7,7 @@ declare global {
     interface Request {
       user?: {
         userId: string;
-        userRole: string;
+        role: string;
       };
     }
   }
@@ -29,15 +29,15 @@ export const authenticateToken = (
       return res.status(401).json({ message: "Access token is missing" });
     }
 
-    const decoded = verifyToken(token);
+    const decoded = verifyAccessToken(token);
     if (!decoded) {
       return res.status(403).json({ message: "Invalid or expired token" });
     }
 
-    req.user = decoded as { userId: string; userRole: string };
+    req.user = decoded as { userId: string; role: string };
     next();
   } catch (error) {
-    return res.status(403).json({ message: "Invalid token" });
+    return res.status(403).json({ message: "Invalid or expired token" });
   }
 };
 
@@ -54,7 +54,7 @@ export const requireAdmin = (
     return res.status(401).json({ message: "User not authenticated" });
   }
 
-  if (req.user.userRole !== "ADMIN") {
+  if (req.user.role !== "ADMIN") {
     return res.status(403).json({ message: "Access denied: Admin role required" });
   }
 

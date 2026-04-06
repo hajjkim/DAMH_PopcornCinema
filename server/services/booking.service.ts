@@ -8,9 +8,10 @@ import {
   expirePendingTransactions,
 } from "./payment.service";
 import { PaymentTransaction } from "../schemas/payment-transaction.schema";
+import { generateOrderCode } from "../utils/generate-code";
 
 type CreateBookingInput = {
-  userId: string;
+  user: string;
   showtimeId: string;
   seats: string[];
   snacks?: { snackId: string; qty: number }[];
@@ -18,6 +19,21 @@ type CreateBookingInput = {
   ticketTotal: number;
   snackTotal?: number;
   finalTotal: number;
+  seatHoldId?: string;
+};
+
+/**
+ * Generate a unique booking code with retry logic to handle collisions
+ */
+const generateUniqueBookingCode = async (maxRetries: number = 5): Promise<string> => {
+  for (let i = 0; i < maxRetries; i++) {
+    const code = generateOrderCode();
+    const existing = await Booking.findOne({ bookingCode: code }).lean();
+    if (!existing) {
+      return code;
+    }
+  }
+  throw new Error(`Failed to generate unique booking code after ${maxRetries} retries`);
 };
 
 /**
@@ -34,17 +50,14 @@ const runCore = async (
     .lean();
   if (!showtime) throw new Error("Showtime not found");
 
-  const invalidSeats = data.seats.filter(
-    (seat) => !showtime.seatLayout.includes(seat)
-  );
-  if (invalidSeats.length > 0) {
-    throw new Error(`Invalid seats: ${invalidSeats.join(", ")}`);
-  }
+  // Note: Seat validation and conversion from string IDs to ObjectIds is handled in the booking route.
+  // By the time we reach here, data.seats contains ObjectIds obtained from the Seat collection.
+  // We don't validate seats here since the route already validated and converted them.
 
   const now = new Date();
   const holds = await SeatHold.find({
     showtimeId: data.showtimeId,
-    userId: { $ne: data.userId }, // bỏ qua hold của chính user đang thanh toán
+    userId: { $ne: data.user }, // bỏ qua hold của chính user đang thanh toán
     expiresAt: { $gt: now },
     seats: { $in: data.seats },
   })
@@ -60,7 +73,8 @@ const runCore = async (
   }
 
   const existingBookings = await Booking.find({
-    showtimeId: data.showtimeId,
+    showtime: data.showtimeId,
+    user: { $ne: data.user }, // Exclude current user's bookings
     status: { $in: ["pending_payment", "pending_confirmation", "confirmed"] },
     seats: { $in: data.seats },
   })
@@ -88,23 +102,26 @@ const runCore = async (
       .lean();
     if (!promo) throw new Error("Invalid promotion code");
     promoCode = promo.code;
-    const discountText = promo.discount.trim();
-    if (discountText.endsWith("%")) {
-      const pct = Number(discountText.replace("%", "")) || 0;
-      discountAmount = Math.floor(((ticketTotal + snackTotal) * pct) / 100);
+    const discountType = promo.discountType || "FIXED_AMOUNT";
+    const discountValue = Number(promo.discountValue ?? 0);
+    
+    if (discountType === "PERCENTAGE") {
+      discountAmount = Math.floor(((ticketTotal + snackTotal) * discountValue) / 100);
     } else {
-      discountAmount = Number(discountText) || 0;
+      discountAmount = discountValue;
     }
   }
 
   const computedFinal = Math.max(ticketTotal + snackTotal - discountAmount, 0);
   const paymentExpiresAt = new Date(Date.now() + 3 * 60 * 1000); // 3 minutes
+  const bookingCode = await generateUniqueBookingCode();
 
   const [booking] = await Booking.create(
     [
       {
-        userId: data.userId,
-        showtimeId: data.showtimeId,
+        user: data.user,
+        showtime: data.showtimeId,
+        bookingCode,
         seats: data.seats,
         snacks: data.snacks || [],
         promotionCode: promoCode,
@@ -123,9 +140,16 @@ const runCore = async (
     { session: sessionOrNull || undefined }
   );
 
+  // Also clean up the specific seat hold by ID if provided
+  if (data.seatHoldId) {
+    await SeatHold.findByIdAndDelete(data.seatHoldId, {
+      session: sessionOrNull || undefined,
+    });
+  }
+
   const payment = await createPaymentTransaction(
     {
-      userId: data.userId,
+      user: data.user,
       showtimeId: data.showtimeId,
       bookingId: booking._id.toString(),
       amount: computedFinal,
@@ -181,7 +205,7 @@ export const createBooking = async (data: CreateBookingInput) => {
 };
 
 export const getBookingsByUser = async (userId: string) => {
-  return Booking.find({ userId }).sort({ createdAt: -1 }).lean();
+  return Booking.find({ user: userId }).sort({ createdAt: -1 }).lean();
 };
 
 export const updateBookingStatus = async (id: string, status: string) => {

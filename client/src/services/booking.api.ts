@@ -8,6 +8,7 @@ export type BookingInput = {
   ticketTotal: number;
   snackTotal?: number;
   finalTotal: number;
+  seatHoldId?: string;
 };
 
 export type BookingStatus =

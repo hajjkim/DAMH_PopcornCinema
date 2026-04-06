@@ -20,15 +20,29 @@ interface SnackReport {
   image: string;
 }
 
+interface PaymentReport {
+  _id: string;
+  method: string;
+  amount: number;
+  status: string;
+  transactionId: string;
+  createdAt: string;
+  userName: string;
+  userEmail: string;
+  bookingCode: string;
+}
+
 interface ReportStats {
   totalOrders: number;
   totalTicketSold: number;
   totalMovieRevenue: number;
   totalSnackRevenue: number;
+  totalPayments?: number;
+  totalPaymentAmount?: number;
 }
 
 export default function AdminReports() {
-  const [tab, setTab] = useState<"movies" | "snacks">("movies");
+  const [tab, setTab] = useState<"movies" | "snacks" | "payments">("movies");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -37,10 +51,13 @@ export default function AdminReports() {
     totalTicketSold: 0,
     totalMovieRevenue: 0,
     totalSnackRevenue: 0,
+    totalPayments: 0,
+    totalPaymentAmount: 0,
   });
 
   const [movieReport, setMovieReport] = useState<MovieReport[]>([]);
   const [snackReport, setSnackReport] = useState<SnackReport[]>([]);
+  const [paymentReport, setPaymentReport] = useState<PaymentReport[]>([]);
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -55,6 +72,10 @@ export default function AdminReports() {
         const snacksRes = await adminAPI.getSnacksReport();
         setSnackReport(snacksRes?.snacks || []);
 
+        // Fetch payments report
+        const paymentsRes = await adminAPI.getPaymentsReport();
+        setPaymentReport(paymentsRes?.payments || []);
+
         // Calculate stats
         const totalMovieRevenue = moviesRes?.movies?.reduce(
           (sum: number, m: MovieReport) => sum + m.revenue,
@@ -66,6 +87,10 @@ export default function AdminReports() {
         ) || 0;
         const totalTicketSold = moviesRes?.movies?.reduce(
           (sum: number, m: MovieReport) => sum + m.ticketsSold,
+          0
+        ) || 0;
+        const totalPaymentAmount = paymentsRes?.payments?.reduce(
+          (sum: number, p: PaymentReport) => sum + p.amount,
           0
         ) || 0;
 
@@ -82,6 +107,8 @@ export default function AdminReports() {
           totalTicketSold,
           totalMovieRevenue,
           totalSnackRevenue,
+          totalPayments: paymentsRes?.payments?.length || 0,
+          totalPaymentAmount,
         });
       } catch (err: any) {
         console.error("Error fetching reports:", err);
@@ -159,6 +186,13 @@ export default function AdminReports() {
           onClick={() => setTab("snacks")}
         >
           Bắp nước
+        </button>
+
+        <button
+          className={tab === "payments" ? "active" : ""}
+          onClick={() => setTab("payments")}
+        >
+          Hóa đơn
         </button>
       </div>
 
@@ -249,6 +283,38 @@ export default function AdminReports() {
                       />
                     </div>
                   </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {tab === "payments" && (
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Khách hàng</th>
+                <th>Email</th>
+                <th>Mã booking</th>
+                <th>Phương thức</th>
+                <th>Số tiền</th>
+                <th>Mã giao dịch</th>
+                <th>Ngày</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {paymentReport.map((p, i) => (
+                <tr key={p._id}>
+                  <td>#{i + 1}</td>
+                  <td>{p.userName}</td>
+                  <td>{p.userEmail}</td>
+                  <td>{p.bookingCode || "N/A"}</td>
+                  <td>{p.method}</td>
+                  <td>{formatCurrency(p.amount)}</td>
+                  <td>{p.transactionId}</td>
+                  <td>{new Date(p.createdAt).toLocaleDateString("vi-VN")}</td>
                 </tr>
               ))}
             </tbody>

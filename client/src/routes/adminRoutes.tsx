@@ -1,5 +1,6 @@
 import { Route } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout";
+import ProtectedRoute from "./ProtectedRoute";
 
 // DASHBOARD
 import AdminDashboard from "../pages/admin/AdminDashboard";
@@ -55,7 +56,7 @@ import AdminPromotionEdit from "../pages/admin/Promotions/AdminPromotionEdit";
 import AdminReports from "../pages/admin/AdminReports";
 
 export const adminRoutes = (
-  <Route path="/admin" element={<AdminLayout />}>
+  <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
 
     {/* DASHBOARD */}
     <Route path="dashboard" element={<AdminDashboard />} />

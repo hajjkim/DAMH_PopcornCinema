@@ -92,41 +92,56 @@ const ShowtimePicker = memo(function ShowtimePicker({
         <span className="booking-showtime-subtitle">{selectedCinema}</span>
       </div>
 
-      <div className="booking-date-list">
-        {showtimeDates.map((date) => (
-          <button
-            key={date}
-            type="button"
-            className={date === showtimeDate ? "booking-date-btn active" : "booking-date-btn"}
-            onClick={() => onSelectDate(date)}
-          >
-            {formatWeekdayLabel(date)} - {formatDateLabel(date)}
-          </button>
-        ))}
-      </div>
-
-      <div className="booking-showtime-grid">
-        {showtimes.map((st) => (
-          <button
-            key={st._id}
-            type="button"
-            className={
-              selectedTime === st.time && selectedShowtimeId === st._id
-                ? "booking-showtime-btn active"
-                : "booking-showtime-btn"
-            }
-            onClick={() => onSelectShowtime(st)}
-          >
-            {st.time}
-          </button>
-        ))}
-
-        {showtimes.length === 0 && (
-          <div className="booking-showtime-empty">
-            Rạp này chưa có suất chiếu cho ngày đã chọn
+      {showtimeDates.length === 0 ? (
+        <div style={{
+          padding: "20px",
+          textAlign: "center",
+          color: "#999",
+          backgroundColor: "#f5f5f5",
+          borderRadius: "4px",
+          fontSize: "14px",
+        }}>
+          <p>Rạp này chưa có suất chiếu khả dụng</p>
+        </div>
+      ) : (
+        <>
+          <div className="booking-date-list">
+            {showtimeDates.map((date) => (
+              <button
+                key={date}
+                type="button"
+                className={date === showtimeDate ? "booking-date-btn active" : "booking-date-btn"}
+                onClick={() => onSelectDate(date)}
+              >
+                {formatWeekdayLabel(date)} - {formatDateLabel(date)}
+              </button>
+            ))}
           </div>
-        )}
-      </div>
+
+          <div className="booking-showtime-grid">
+            {showtimes.map((st) => (
+              <button
+                key={st._id}
+                type="button"
+                className={
+                  selectedTime === st.time && selectedShowtimeId === st._id
+                    ? "booking-showtime-btn active"
+                    : "booking-showtime-btn"
+                }
+                onClick={() => onSelectShowtime(st)}
+              >
+                {st.time}
+              </button>
+            ))}
+
+            {showtimes.length === 0 && (
+              <div className="booking-showtime-empty">
+                Rạp này chưa có suất chiếu cho ngày đã chọn
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 });
@@ -134,15 +149,30 @@ const ShowtimePicker = memo(function ShowtimePicker({
 function buildSeatLayout(): Seat[] {
   const result: Seat[] = [];
 
-  rows.forEach((row) => {
-    for (let i = 1; i <= seatsPerRow; i++) {
-      result.push({
-        id: `${row}${i}`,
-        row,
-        number: i,
-        status: "available",
-        type: "normal",
-      });
+  rows.forEach((row, rowIndex) => {
+    // Row H (last row) contains only couple seats
+    if (rowIndex === rows.length - 1) {
+      // Create 5 couple seats for row H
+      for (let i = 1; i <= 5; i++) {
+        result.push({
+          id: `${row}${i}`,
+          row,
+          number: i,
+          status: "available",
+          type: "couple",
+        });
+      }
+    } else {
+      // Regular seats for rows A-G
+      for (let i = 1; i <= seatsPerRow; i++) {
+        result.push({
+          id: `${row}${i}`,
+          row,
+          number: i,
+          status: "available",
+          type: "normal",
+        });
+      }
     }
   });
 
@@ -201,6 +231,17 @@ export default function BookingPage() {
     if (!name) return "";
     return name.split(" - ")[0].trim();
   }, []);
+
+  // Get available cinemas for current movie
+  const availableCinemasForMovie = useMemo(() => {
+    if (movieShowtimes.length === 0) return [];
+    const cinemaSet = new Set<string>();
+    movieShowtimes.forEach((st) => {
+      const normalized = normalizeCinema(st.cinema);
+      cinemaSet.add(normalized);
+    });
+    return Array.from(cinemaSet);
+  }, [movieShowtimes, normalizeCinema]);
 
   const formatDateLabel = useCallback((dateStr: string) => {
     if (!dateStr) return "";
@@ -385,6 +426,12 @@ export default function BookingPage() {
     },
     [normalizeCinema]
   );
+
+  // Reset seats when switching to a different showtime/cinema
+  useEffect(() => {
+    setSeats(buildSeatLayout());
+    setSeatStatus(null);
+  }, [showtimeId]);
 
   useEffect(() => {
     if (!showtimeId) return;
@@ -608,8 +655,8 @@ export default function BookingPage() {
   };
 
   const handleContinue = () => {
-    if (selectedSeats.length === 0) {
-      alert("Vui lòng chọn ít nhất 1 ghế.");
+    if (!showtimeId) {
+      alert("Vui lòng chọn suất chiếu. Nếu rạp không có suất chiếu, vui lòng chọn rạp khác hoặc ngày khác.");
       return;
     }
 
@@ -618,8 +665,8 @@ export default function BookingPage() {
       return;
     }
 
-    if (!showtimeId) {
-      alert("Vui lòng chọn suất chiếu.");
+    if (selectedSeats.length === 0) {
+      alert("Vui lòng chọn ít nhất 1 ghế.");
       return;
     }
 
@@ -635,6 +682,7 @@ export default function BookingPage() {
         seats: selectedSeats.map((seat) => (seat.type === "couple" ? `C${seat.number}` : seat.id)),
         totalPrice,
         showtimeId,
+        seatHoldId: seatHoldId,
       },
     });
   };
@@ -676,7 +724,20 @@ export default function BookingPage() {
                   <label>Chọn rạp</label>
                   <select
                     value={selectedCinema}
-                    onChange={(e) => setSelectedCinema(e.target.value)}
+                    onChange={(e) => {
+                      const cinemaName = e.target.value;
+                      const normalized = normalizeCinema(cinemaName);
+                      
+                      // Validate: selected cinema must have showtimes for current movie
+                      if (bookingInfo.movieId) {
+                        if (!availableCinemasForMovie.includes(normalized)) {
+                          alert("Rạp này không có suất chiếu cho phim đã chọn. Vui lòng chọn rạp khác.");
+                          return;
+                        }
+                      }
+                      
+                      setSelectedCinema(cinemaName);
+                    }}
                     disabled={filteredCinemas.length === 0}
                   >
                     {filteredCinemas.length > 0 ? (
@@ -714,60 +775,73 @@ export default function BookingPage() {
                 <div className="screen-label">Màn hình</div>
               </div>
 
-              <div className="seat-map">
-                {groupedSeats.map((group) => (
-                  <div className="seat-row" key={group.row}>
-                    <div className="seat-row-label">{group.row}</div>
+              {cinemaShowtimes.length === 0 ? (
+                <div style={{
+                  padding: "40px 20px",
+                  textAlign: "center",
+                  color: "#999",
+                  fontSize: "16px",
+                }}>
+                  <p>Chọn suất chiếu để xem bản đồ ghế</p>
+                </div>
+              ) : (
+                <>
+                  <div className="seat-map">
+                    {groupedSeats.map((group) => (
+                      <div className="seat-row" key={group.row}>
+                        <div className="seat-row-label">{group.row}</div>
 
-                    <div className="seat-row-seats">
-                      {group.seats.map((seat, index) => {
-                        const addGap = group.row !== "L" && index === 4 ? "middle-gap" : "";
+                        <div className="seat-row-seats">
+                          {group.seats.map((seat, index) => {
+                            const addGap = group.row !== "L" && index === 4 ? "middle-gap" : "";
 
-                        return (
-                          <button
-                            key={seat.id}
-                            type="button"
-                            className={`seat-item ${seat.status} ${seat.type} ${addGap}`}
-                            onClick={() => handleSeatClick(seat.id)}
-                            disabled={seat.status === "booked"}
-                            title={seat.id}
-                          >
-                            {seat.status === "selected"
-                              ? seat.type === "couple"
-                                ? `C${seat.number}`
-                                : seat.id
-                              : ""}
-                          </button>
-                        );
-                      })}
+                            return (
+                              <button
+                                key={seat.id}
+                                type="button"
+                                className={`seat-item ${seat.status} ${seat.type} ${addGap}`}
+                                onClick={() => handleSeatClick(seat.id)}
+                                disabled={seat.status === "booked"}
+                                title={seat.id}
+                              >
+                                {seat.status === "selected"
+                                  ? seat.type === "couple"
+                                    ? `C${seat.number}`
+                                    : seat.id
+                                  : ""}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="seat-bottom-line" />
+
+                  <div className="seat-legend">
+                    <div className="legend-item">
+                      <span className="legend-box normal" />
+                      <span>Ghế thường</span>
+                    </div>
+
+                    <div className="legend-item">
+                      <span className="legend-box booked" />
+                      <span>Ghế đã bán</span>
+                    </div>
+
+                    <div className="legend-item">
+                      <span className="legend-box selected" />
+                      <span>Ghế đang chọn</span>
+                    </div>
+
+                    <div className="legend-item">
+                      <span className="legend-box couple" />
+                      <span>Ghế couple</span>
                     </div>
                   </div>
-                ))}
-              </div>
-
-              <div className="seat-bottom-line" />
-
-              <div className="seat-legend">
-                <div className="legend-item">
-                  <span className="legend-box normal" />
-                  <span>Ghế thường</span>
-                </div>
-
-                <div className="legend-item">
-                  <span className="legend-box booked" />
-                  <span>Ghế đã bán</span>
-                </div>
-
-                <div className="legend-item">
-                  <span className="legend-box selected" />
-                  <span>Ghế đang chọn</span>
-                </div>
-
-                <div className="legend-item">
-                  <span className="legend-box couple" />
-                  <span>Ghế couple</span>
-                </div>
-              </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -835,7 +909,13 @@ export default function BookingPage() {
                   Quay lại
                 </button>
 
-                <button type="button" className="booking-next-btn" onClick={handleContinue}>
+                <button 
+                  type="button" 
+                  className="booking-next-btn" 
+                  onClick={handleContinue}
+                  disabled={!showtimeId || selectedSeats.length === 0}
+                  title={!showtimeId ? "Vui lòng chọn suất chiếu" : selectedSeats.length === 0 ? "Vui lòng chọn ít nhất 1 ghế" : ""}
+                >
                   Tiếp tục
                 </button>
               </div>

@@ -78,7 +78,6 @@ export default function ProfilePage() {
       const updatedUser = await updateMyProfile({
         fullName,
         phone,
-        avatar,
         avatarFile,
       });
 
@@ -214,33 +213,7 @@ export default function ProfilePage() {
               color: "#334155",
             }}
           >
-            Avatar URL
-          </label>
-          <input
-            value={avatar}
-            onChange={(e) => setAvatar(e.target.value)}
-            placeholder="https://example.com/avatar.jpg"
-            style={{
-              width: "100%",
-              padding: "12px",
-              border: "1px solid #cbd5e1",
-              borderRadius: "10px",
-              fontSize: "16px",
-              boxSizing: "border-box",
-            }}
-          />
-        </div>
-
-        <div style={{ marginBottom: "16px" }}>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "8px",
-              fontWeight: 600,
-              color: "#334155",
-            }}
-          >
-            Upload ảnh đại diện
+            Ảnh đại diện
           </label>
           <input
             type="file"
@@ -254,9 +227,6 @@ export default function ProfilePage() {
               boxSizing: "border-box",
             }}
           />
-          <p style={{ marginTop: "8px", color: "#64748b", fontSize: "14px" }}>
-            Nếu chọn file, hệ thống sẽ ưu tiên upload file thay vì Avatar URL.
-          </p>
         </div>
 
         {error ? (
@@ -285,6 +255,7 @@ export default function ProfilePage() {
           {saving ? "Đang lưu..." : "Lưu thay đổi"}
         </button>
       </form>
+
     </div>
   );
 }

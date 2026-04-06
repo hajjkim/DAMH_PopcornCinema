@@ -31,7 +31,7 @@ const paymentTransactionSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["PENDING", "PAID", "EXPIRED", "CANCELLED"],
+      enum: ["PENDING", "PAID", "EXPIRED", "CANCELLED", "REFUNDED"],
       default: "PENDING",
     },
     qrContent: { type: String, default: "" },

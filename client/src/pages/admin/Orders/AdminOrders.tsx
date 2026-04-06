@@ -6,13 +6,19 @@ import { bookingAPI } from "../../../services/admin.api";
 type Order = {
   _id: string;
   bookingCode?: string;
+  seats?: string[];
   user?: { fullName: string };
   userId?: string;
-  showtime?: any;
+  showtime?: {
+    movieId?: { title: string };
+    auditoriumId?: { name: string; cinemaId?: { name: string } };
+  };
   showtimeId?: string;
-  totalAmount?: number;
+  ticketTotal?: number;
+  snackTotal?: number;
+  finalTotal?: number;
   paymentMethod?: string;
-  status: "PENDING" | "PAID" | "CANCELLED";
+  status: "pending_payment" | "pending_confirmation" | "confirmed" | "failed";
   createdAt?: string;
 };
 
@@ -26,23 +32,50 @@ export default function AdminOrders() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        setLoading(true);
-        const response = await bookingAPI.getAll();
-        setOrders(response || []);
-        setFilteredOrders(response || []);
-      } catch (err: any) {
-        console.error("Error fetching orders:", err);
-        setError(err.message || "Failed to load orders");
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Helper function to format seats - handle both ObjectIds and seat strings
+  const formatSeats = (seats?: string[]): string => {
+    if (!seats || seats.length === 0) return "N/A";
+    
+    // If seats are readable format (like A1, B2), just join them
+    const readableSeats = seats.filter(s => /^[A-Z]\d+$/.test(s));
+    if (readableSeats.length === seats.length) {
+      return readableSeats.join(", ");
+    }
+    
+    // If we have ObjectIds mixed in, just show count for now
+    const hasObjectIds = seats.some(s => /^[0-9a-f]{24}$/.test(s));
+    if (hasObjectIds) {
+      return `${seats.length} ghế`;
+    }
+    
+    return seats.join(", ");
+  };
 
-    fetchOrders();
+  const refreshOrders = async (silent = false) => {
+    try {
+      if (!silent) setLoading(true);
+      const response = await bookingAPI.getAll();
+      setOrders(response || []);
+      setFilteredOrders(response || []);
+    } catch (err: any) {
+      console.error("Error fetching orders:", err);
+      if (!silent) setError(err.message || "Failed to load orders");
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshOrders();
   }, []);
+
+  // Auto-poll every 8s while any order is pending_confirmation (waiting for SePay webhook)
+  useEffect(() => {
+    const hasPending = orders.some((o) => o.status === "pending_confirmation");
+    if (!hasPending) return;
+    const id = setInterval(() => refreshOrders(true), 8000);
+    return () => clearInterval(id);
+  }, [orders]);
 
   useEffect(() => {
     let filtered = orders;
@@ -81,6 +114,8 @@ export default function AdminOrders() {
       }
     }
   };
+
+
 
   if (loading) {
     return (
@@ -121,9 +156,10 @@ export default function AdminOrders() {
             <label>Trạng thái</label>
             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
               <option value="">Tất cả</option>
-              <option value="PENDING">Chờ thanh toán</option>
-              <option value="PAID">Đã thanh toán</option>
-              <option value="CANCELLED">Đã hủy</option>
+              <option value="pending_payment">Chờ thanh toán</option>
+              <option value="pending_confirmation">Chờ xác nhận</option>
+              <option value="confirmed">Đã xác nhận</option>
+              <option value="failed">Thất bại</option>
             </select>
           </div>
         </div>
@@ -135,10 +171,11 @@ export default function AdminOrders() {
           <thead>
             <tr>
               <th>ID</th>
-              <th>Mã đơn</th>
+              <th>Ghế</th>
               <th>Khách hàng</th>
               <th>Phim</th>
               <th>Rạp</th>
+              <th>Phòng chiếu</th>
               <th>Tổng tiền</th>
               <th>Thanh toán</th>
               <th>Trạng thái</th>
@@ -150,26 +187,29 @@ export default function AdminOrders() {
             {paginatedOrders.map((o) => (
               <tr key={o._id}>
                 <td>{o._id}</td>
-                <td><strong>{o.bookingCode || "N/A"}</strong></td>
+                <td><strong>{formatSeats(o.seats)}</strong></td>
                 <td>{o.user?.fullName || "Unknown"}</td>
-                <td>{o.showtime?.movie?.title || "N/A"}</td>
-                <td>{o.showtime?.cinema?.name || "N/A"}</td>
-                <td>{(o.totalAmount || 0).toLocaleString()}đ</td>
-                <td>{o.paymentMethod || "N/A"}</td>
+                <td>{o.showtime?.movieId?.title || "N/A"}</td>
+                <td>{o.showtime?.auditoriumId?.cinemaId?.name || "N/A"}</td>
+                <td>{o.showtime?.auditoriumId?.name || "N/A"}</td>
+                <td><strong>{(o.finalTotal || 0).toLocaleString("vi-VN")} đ</strong></td>
+                <td>QR Code</td>
 
                 <td>
                   <span className={`admin-badge ${
-                    o.status === "PAID"
+                    o.status === "confirmed"
                       ? "admin-badge-success"
-                      : o.status === "PENDING"
+                      : o.status === "pending_payment"
                       ? "admin-badge-warning"
                       : "admin-badge-danger"
                   }`}>
-                    {o.status === "PAID"
-                      ? "Đã thanh toán"
-                      : o.status === "PENDING"
+                    {o.status === "confirmed"
+                      ? "Đã xác nhận"
+                      : o.status === "pending_payment"
                       ? "Chờ thanh toán"
-                      : "Đã hủy"}
+                      : o.status === "pending_confirmation"
+                      ? "Chờ xác nhận"
+                      : "Thất bại"}
                   </span>
                 </td>
 
@@ -179,16 +219,7 @@ export default function AdminOrders() {
                       Chi tiết
                     </Link>
 
-                    <Link to={`/admin/orders/${o._id}/edit`} className="admin-btn admin-btn-sm admin-btn-outline">
-                      Sửa
-                    </Link>
 
-                    <button
-                      className="admin-btn admin-btn-sm admin-btn-danger"
-                      onClick={() => handleDelete(o._id)}
-                    >
-                      Xóa
-                    </button>
                   </div>
                 </td>
               </tr>

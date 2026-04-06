@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../middlewares/auth.middleware";
+import { upload } from "../middlewares/upload.middleware";
 import {
   getAllPromotions,
   getPromotionById,
@@ -93,7 +94,7 @@ router.get("/:id", async (req, res) => {
 // ─── Admin routes ─────────────────────────────────────────────────────────────
 
 // Create a promotion
-router.post("/", authorize("ADMIN"), async (req, res) => {
+router.post("/", authenticate, authorize("ADMIN"), async (req, res) => {
   try {
     const promotion = await createPromotion(req.body);
     res.status(201).json(promotion);
@@ -104,9 +105,13 @@ router.post("/", authorize("ADMIN"), async (req, res) => {
 });
 
 // Update a promotion
-router.put("/:id", authorize("ADMIN"), async (req, res) => {
+router.put("/:id", authenticate, authorize("ADMIN"), upload.single("image"), async (req, res) => {
   try {
-    const promotion = await updatePromotion(String(req.params.id), req.body);
+    const body = { ...req.body };
+    if ((req as any).file) {
+      body.imageUrl = `http://localhost:5000/uploads/${(req as any).file.filename}`;
+    }
+    const promotion = await updatePromotion(String(req.params.id), body);
     res.status(200).json(promotion);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -116,7 +121,7 @@ router.put("/:id", authorize("ADMIN"), async (req, res) => {
 
 // Increment usage count — called internally after a booking is confirmed
 // Guarded so external clients cannot inflate usage counts arbitrarily
-router.patch("/:id/increment-usage", authorize("ADMIN"), async (req, res) => {
+router.patch("/:id/increment-usage", authenticate, authorize("ADMIN"), async (req, res) => {
   try {
     const promotion = await incrementUsageCount(String(req.params.id));
     res.status(200).json(promotion);
@@ -127,7 +132,7 @@ router.patch("/:id/increment-usage", authorize("ADMIN"), async (req, res) => {
 });
 
 // Delete a promotion
-router.delete("/:id", authorize("ADMIN"), async (req, res) => {
+router.delete("/:id", authenticate, authorize("ADMIN"), async (req, res) => {
   try {
     await deletePromotion(String(req.params.id));
     res.status(200).json({ message: "Promotion deleted successfully" });

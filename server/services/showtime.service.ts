@@ -1,33 +1,95 @@
 import { Showtime } from "../schemas/showtime.schema";
 import { SeatHold } from "../schemas/seat-hold.schema";
 import { Booking } from "../schemas/booking.schema";
+import { Seat } from "../schemas/seat.schema";
 
 export const getAllShowtimes = async () => {
-  // Chỉ trả về các suất chưa quá thời gian chiếu
-  const now = new Date();
-  const today = now.toLocaleDateString("en-CA"); // YYYY-MM-DD
+  // Return all showtimes sorted by startTime in descending order (newest first)
+  const showtimes = await Showtime.find()
+    .populate("movieId", "title")
+    .populate({
+      path: "auditoriumId",
+      select: "name cinemaId",
+      populate: {
+        path: "cinemaId",
+        select: "name",
+      },
+    })
+    .sort({ startTime: -1 });
 
-  // Lọc cơ bản theo ngày
-  const candidates = await Showtime.find({ date: { $gte: today } })
-    .sort({ date: 1, time: 1 })
-    .lean();
-
-  // Loại các suất cùng ngày nhưng đã qua giờ chiếu
-  const filtered = candidates.filter((st) => {
-    if (st.date > today) return true;
-    // st.date === today
-    const [h, m] = String(st.time || "").split(":").map(Number);
-    if (Number.isNaN(h) || Number.isNaN(m)) return true; // giữ lại nếu format lạ
-    const showDate = new Date(now);
-    showDate.setHours(h, m, 0, 0);
-    return showDate.getTime() > now.getTime();
-  });
-
-  return filtered;
+  return showtimes;
 };
 
 export const getShowtimeById = async (id: string) => {
-  const showtime = await Showtime.findById(id).lean();
+  const showtime = await Showtime.findById(id)
+    .populate("movieId", "title")
+    .populate({
+      path: "auditoriumId",
+      select: "name cinemaId",
+      populate: {
+        path: "cinemaId",
+        select: "name",
+      },
+    });
+
+  if (!showtime) {
+    throw new Error("Showtime not found");
+  }
+
+  return showtime;
+};
+
+export const createShowtime = async (data: any) => {
+  const showtime = new Showtime({
+    movieId: data.movieId,
+    auditoriumId: data.auditoriumId,
+    startTime: data.startTime,
+    endTime: data.endTime,
+    basePrice: data.basePrice || 0,
+    status: data.status || "OPEN",
+  });
+
+  await showtime.save();
+
+  return await showtime.populate([
+    { path: "movieId", select: "title" },
+    {
+      path: "auditoriumId",
+      select: "name cinemaId",
+      populate: { path: "cinemaId", select: "name" },
+    },
+  ]);
+};
+
+export const updateShowtime = async (id: string, data: any) => {
+  const updateData: any = {};
+
+  if (data.movieId) updateData.movieId = data.movieId;
+  if (data.auditoriumId) updateData.auditoriumId = data.auditoriumId;
+  if (data.startTime) updateData.startTime = data.startTime;
+  if (data.endTime) updateData.endTime = data.endTime;
+  if (typeof data.basePrice === "number") updateData.basePrice = data.basePrice;
+  if (data.status) updateData.status = data.status;
+
+  const showtime = await Showtime.findByIdAndUpdate(id, updateData, {
+    new: true,
+  })
+    .populate("movieId", "title")
+    .populate({
+      path: "auditoriumId",
+      select: "name cinemaId",
+      populate: { path: "cinemaId", select: "name" },
+    });
+
+  if (!showtime) {
+    throw new Error("Showtime not found");
+  }
+
+  return showtime;
+};
+
+export const deleteShowtime = async (id: string) => {
+  const showtime = await Showtime.findByIdAndDelete(id);
 
   if (!showtime) {
     throw new Error("Showtime not found");
@@ -43,6 +105,14 @@ export const getShowtimeSeatStatus = async (showtimeId: string) => {
     throw new Error("Showtime not found");
   }
 
+  // Fetch all seats for this auditorium
+  const allAuditoriumSeats = await Seat.find({ 
+    auditoriumId: showtime.auditoriumId,
+    status: "ACTIVE"
+  }).lean();
+
+  const allSeatIds = allAuditoriumSeats.map((s) => s._id.toString());
+
   const now = new Date();
 
   const activeHolds = await SeatHold.find({
@@ -57,9 +127,9 @@ export const getShowtimeSeatStatus = async (showtimeId: string) => {
 
   const heldSeats = activeHolds.flatMap((hold) => hold.seats || []);
   const bookedSeats = confirmedBookings.flatMap((booking) => booking.seats || []);
-
+  
   return {
-    allSeats: showtime.seatLayout || [],
+    allSeats: allSeatIds,
     heldSeats,
     bookedSeats,
   };

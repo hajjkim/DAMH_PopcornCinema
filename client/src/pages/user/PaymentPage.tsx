@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../../styles/PaymentPage.css";
+import { apiRequest } from "../../services/api";
 import {
   createBooking,
-  getMyBookings,
   type PaymentMeta,
 } from "../../services/booking.api";
 import { getPaymentConfig, type PaymentConfig } from "../../services/payment.api";
@@ -33,6 +33,7 @@ type PaymentState = {
   finalTotal?: number;
   qrImage?: string;
   showtimeId?: string;
+  seatHoldId?: string;
 };
 
 type InvoiceStatus =
@@ -109,10 +110,11 @@ export default function PaymentPage() {
   const [promoMessage, setPromoMessage] = useState<string>("");
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
-  const [showtimeMeta, setShowtimeMeta] = useState<{ date?: string; time?: string; cinema?: string; movieId?: string }>({});
+  const [showtimeMeta, setShowtimeMeta] = useState<{ date?: string; time?: string; cinema?: string; room?: string; movieId?: string }>({});
   const [movieMeta, setMovieMeta] = useState<Movie | null>(null);
-  const [bookingId, setBookingId] = useState<string | null>(null);
-  const [confirmedBooking, setConfirmedBooking] = useState<any>(null);
+  const sePayFormRef = useRef<HTMLFormElement>(null);
+  const [sePayCheckoutUrl, setSePayCheckoutUrl] = useState<string>("");
+  const [sePayFormData, setSePayFormData] = useState<Record<string, string | number> | null>(null);
 
   const snackLines = paymentInfo.snackLines || [];
   const seats = paymentInfo.seats || [];
@@ -147,7 +149,7 @@ export default function PaymentPage() {
   // Load promotions from BE
   useEffect(() => {
     getPromotions()
-      .then((data) => setPromotions(data))
+      .then((data) => setPromotions(data || []))
       .catch((err) => console.error("Error loading promotions:", err));
   }, []);
 
@@ -156,11 +158,20 @@ export default function PaymentPage() {
     if (!paymentInfo.showtimeId) return;
     (async () => {
       try {
-        const st = await getShowtimeById(paymentInfo.showtimeId);
-        setShowtimeMeta({ ...(st as any), room: (st as any).cinema });
-        if ((st as any).movieId) {
-          const mv = await getMovieById((st as any).movieId);
-          setMovieMeta(mv);
+        const st = await getShowtimeById(paymentInfo.showtimeId as string);
+        setShowtimeMeta({ ...(st as any), room: (st as any).auditoriumId?.name || "Phòng 1" });
+        
+        // movieId might be already populated as an object or just an ID string
+        const movieData = (st as any).movieId;
+        if (movieData) {
+          if (typeof movieData === 'object' && movieData._id) {
+            // Already populated as an object
+            setMovieMeta(movieData);
+          } else if (typeof movieData === 'string') {
+            // Just an ID, need to fetch the movie
+            const mv = await getMovieById(movieData);
+            setMovieMeta(mv);
+          }
         }
       } catch (err) {
         console.error("Error loading showtime/movie:", err);
@@ -187,7 +198,7 @@ export default function PaymentPage() {
   }, [invoiceStatus]);
 
   const handleApplyPromo = () => {
-    if (!selectedPromoCode) {
+    if (!selectedPromoCode || typeof selectedPromoCode !== "string") {
       setAppliedPromo(null);
       setPromoMessage("Vui lòng chọn mã giảm giá.");
       return;
@@ -195,7 +206,7 @@ export default function PaymentPage() {
 
     const code = selectedPromoCode.trim().toUpperCase();
     const foundPromo = promotions.find(
-      (item) => item.code.toUpperCase() === code
+      (item) => item.code?.toUpperCase() === code
     );
 
     if (!foundPromo) {
@@ -204,23 +215,27 @@ export default function PaymentPage() {
       return;
     }
 
-    // normalize discount string, e.g. "30%" hoặc "20000"
+    // Parse discountType and discountValue from promotion, ensure value is a number
+    const discountType = (foundPromo as any).discountType || "FIXED_AMOUNT";
+    const discountValue = Number((foundPromo as any).discountValue ?? 0);
+
     let type: "percent" | "amount" = "amount";
-    let value = 0;
-    const discountText = (foundPromo as any).discount?.toString().trim() || "";
-    if (discountText.endsWith("%")) {
+    let value = discountValue;
+
+    if (discountType === "PERCENTAGE") {
       type = "percent";
-      value = Number(discountText.replace("%", "")) || 0;
-    } else {
-      value = Number(discountText) || 0;
+    } else if (discountType === "FIXED_AMOUNT") {
+      type = "amount";
     }
 
-    setAppliedPromo({
-      code: foundPromo.code,
-      label: (foundPromo as any).title || foundPromo.code,
+    const newPromo: PromoItem = {
+      code: foundPromo.code || code,
+      label: foundPromo.description || (foundPromo as any).title || foundPromo.code,
       type,
       value,
-    });
+    };
+
+    setAppliedPromo(newPromo);
     setPromoMessage(`Áp dụng thành công mã ${foundPromo.code}.`);
   };
 
@@ -252,52 +267,30 @@ export default function PaymentPage() {
         ticketTotal: paymentInfo.totalPrice || 0,
         snackTotal: paymentInfo.snackTotal || 0,
         finalTotal: finalTotal,
+        seatHoldId: paymentInfo.seatHoldId,
       });
 
       const { booking, payment } = result;
-      console.log("Booking created successfully:", booking);
-      setBookingId(booking._id);
-      // Đồng bộ nội dung chuyển khoản/order code từ BE
-      if (payment?.orderCode) {
-        setOrderCode(payment.orderCode);
-      }
-      if (payment?.qrImageUrl && !paymentInfo.qrImage) {
-        paymentInfo.qrImage = payment.qrImageUrl;
-      }
+      const invoiceNumber = payment?.orderCode || orderCode;
 
-      // Lưu vào localStorage (optional, cho tracking)
-      const invoice: InvoiceItem = {
-        id: booking._id,
-        createdAt: booking.createdAt,
-        movieTitle:
-          movieMeta?.title || paymentInfo.movieTitle || "Chưa có tên phim",
-        cinema: showtimeMeta.cinema || paymentInfo.cinema || "Chưa có rạp",
-        date: showtimeMeta.date || paymentInfo.date || "",
-        time: showtimeMeta.time || paymentInfo.time || "",
-        room: roomLabel,
-        format: paymentInfo.format || "",
-        seats,
-        ticketTotal: paymentInfo.totalPrice || 0,
-        snackLines,
-        snackTotal: paymentInfo.snackTotal || 0,
-        finalTotal,
-        status: "pending_confirmation",
-        paymentMethod: "bank_transfer_qr",
-        qrImage: paymentConfig?.qrImage || paymentInfo.qrImage,
-        promoCode: appliedPromo?.code || "",
-        discountAmount,
-      };
-
-      const oldInvoices = JSON.parse(localStorage.getItem("invoices") || "[]");
-      localStorage.setItem("invoices", JSON.stringify([invoice, ...oldInvoices]));
-
-      setInvoiceStatus("pending_confirmation");
-      setPromoMessage("Đặt vé thành công! Vui lòng chuyển khoản để hoàn tất.");
-
-      // Nếu đã thanh toán (confirmed ngay), điều hướng sang trang vé
-      if (booking.status === "confirmed") {
-        navigate("/ticket", { state: { bookingId: booking._id } });
-      }
+      // Call server to generate signed SePay checkout fields
+      const sePayRes = await apiRequest<{ checkoutUrl: string; fields: Record<string, string | number> }>(
+        "/payments/sepay/init",
+        {
+          method: "POST",
+          auth: true,
+          body: JSON.stringify({
+            order_invoice_number: invoiceNumber,
+            order_amount: finalTotal,
+            order_description: `Dat ve phim ${movieMeta?.title || paymentInfo.movieTitle || ""}`,
+            success_url: `${window.location.origin}/ticket?bookingId=${booking._id}`,
+            error_url: `${window.location.origin}/movies?payment=error`,
+            cancel_url: `${window.location.origin}/movies?payment=cancel`,
+          }),
+        }
+      );
+      setSePayCheckoutUrl(sePayRes.checkoutUrl);
+      setSePayFormData(sePayRes.fields);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Có lỗi xảy ra";
@@ -309,28 +302,12 @@ export default function PaymentPage() {
     }
   };
 
-  // Poll booking status until confirmed
+  // Auto-submit SePay form once fields are ready
   useEffect(() => {
-    if (!bookingId || invoiceStatus !== "pending_confirmation") return;
-    const interval = setInterval(async () => {
-      try {
-        const myBookings = await getMyBookings();
-        const found = myBookings.find((b) => b._id === bookingId);
-        if (found) {
-          setConfirmedBooking(found);
-          if (found.status === "confirmed") {
-            setInvoiceStatus("confirmed");
-            navigate("/ticket", { state: { bookingId: found._id } });
-          } else if (found.status === "pending_confirmation") {
-            setInvoiceStatus("pending_confirmation");
-          }
-        }
-      } catch (err) {
-        console.error("Error polling booking status:", err);
-      }
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [bookingId, invoiceStatus]);
+    if (sePayFormData && sePayFormRef.current) {
+      sePayFormRef.current.submit();
+    }
+  }, [sePayFormData]);
 
   const formatTime = (sec: number) => {
     const m = Math.floor(sec / 60);
@@ -380,47 +357,17 @@ export default function PaymentPage() {
             <p className="payment-pending">Đang chờ hệ thống xác nhận...</p>
           )}
 
-          {invoiceStatus === "failed" && (
-            <p className="payment-failed">Thanh toán thất bại!</p>
-          )}
-
-          <p>Quét mã QR để chuyển khoản và hoàn tất đơn hàng.</p>
+          <p>Thanh toán an toàn qua cổng SePay.</p>
         </div>
 
         <div className="payment-layout">
           <div className="payment-left">
             <div className="payment-card qr-card">
-              <h2>Quét mã QR chuyển khoản</h2>
+              <h2>Thanh toán qua SePay</h2>
 
-              <div className="qr-box">
-    {paymentConfig?.qrImage || paymentInfo.qrImage ? (
-      <img
-        src={paymentConfig?.qrImage || paymentInfo.qrImage || ""}
-        alt="QR thanh toán"
-        className="payment-qr-image"
-      />
-                ) : (
-                  <div className="qr-placeholder">Chưa có ảnh QR</div>
-                )}
-              </div>
-
-              <div className="bank-info">
-                <div className="bank-line">
-                  <span>Ngân hàng</span>
-                  <strong>{paymentConfig?.bankName || BANK_INFO.bankName}</strong>
-                </div>
-                <div className="bank-line">
-                  <span>Số tài khoản</span>
-                  <strong>{paymentConfig?.accountNumber || BANK_INFO.accountNumber}</strong>
-                </div>
-                <div className="bank-line">
-                  <span>Chủ tài khoản</span>
-                  <strong>{paymentConfig?.accountName || BANK_INFO.accountName}</strong>
-                </div>
-                <div className="bank-line">
-                  <span>Nội dung</span>
-                  <strong>{orderCode}</strong>
-                </div>
+              <div className="payment-note">
+                Nhấn <strong>Thanh toán với SePay</strong> để được chuyển đến cổng thanh
+                toán an toàn. Đơn hàng sẽ được xác nhận tự động sau khi giao dịch thành công.
               </div>
 
               <div className="promo-box">
@@ -437,11 +384,16 @@ export default function PaymentPage() {
                     disabled={invoiceStatus !== "unpaid"}
                   >
                     <option value="">-- Chọn mã giảm giá --</option>
-                    {promotions.map((promo, idx) => (
-                      <option key={promo._id || idx} value={promo.code}>
-                        {promo.code} - {(promo as any).title || promo.description || "Khuyến mãi"}
-                      </option>
-                    ))}
+                    {promotions.map((promo, idx) => {
+                      const discountDisplay = promo.discountType === "PERCENTAGE" 
+                        ? `${promo.discountValue}%` 
+                        : `${promo.discountValue.toLocaleString('vi-VN')}đ`;
+                      return (
+                        <option key={promo._id || idx} value={promo.code}>
+                          {promo.code} - Giảm {discountDisplay}
+                        </option>
+                      );
+                    })}
                   </select>
 
                   <button
@@ -471,11 +423,6 @@ export default function PaymentPage() {
                 {promoMessage && <p className="promo-message">{promoMessage}</p>}
               </div>
 
-              <div className="payment-note">
-                Sau khi chuyển khoản xong, vui lòng bấm <strong>Đã thanh toán</strong>.
-                Hệ thống sẽ ghi nhận đơn ở trạng thái <strong>Chờ xác nhận thanh toán</strong>.
-              </div>
-
               <div className="payment-actions">
                 <button
                   type="button"
@@ -483,13 +430,7 @@ export default function PaymentPage() {
                   onClick={handlePaid}
                   disabled={invoiceStatus !== "unpaid" || isLoading}
                 >
-                  {isLoading
-                    ? "Đang xử lý..."
-                    : invoiceStatus === "pending_confirmation"
-                    ? "Đã ghi nhận, chờ xác nhận..."
-                    : invoiceStatus === "confirmed"
-                    ? "Đã xác nhận"
-                    : "Đã thanh toán"}
+                  {isLoading ? "Đang xử lý..." : "Thanh toán với SePay"}
                 </button>
 
                 <button
@@ -500,6 +441,24 @@ export default function PaymentPage() {
                   Quay lại
                 </button>
               </div>
+
+              {sePayFormData && (
+                <form
+                  ref={sePayFormRef}
+                  action={sePayCheckoutUrl}
+                  method="POST"
+                  style={{ display: "none" }}
+                >
+                  {Object.keys(sePayFormData).map((field) => (
+                    <input
+                      key={field}
+                      type="hidden"
+                      name={field}
+                      value={String(sePayFormData[field])}
+                    />
+                  ))}
+                </form>
+              )}
             </div>
           </div>
 
@@ -555,10 +514,19 @@ export default function PaymentPage() {
                 <span>{originalTotal.toLocaleString("vi-VN")} đ</span>
               </div>
 
-              <div className="summary-line">
-                <span>Giảm giá</span>
-                <span>- {discountAmount.toLocaleString("vi-VN")} đ</span>
-              </div>
+              {appliedPromo && (
+                <div className="summary-line">
+                  <span>{appliedPromo.type === "percent" ? `Giảm ${appliedPromo.value}%` : "Giảm"}</span>
+                  <span>- {discountAmount.toLocaleString("vi-VN")} đ</span>
+                </div>
+              )}
+
+              {!appliedPromo && (
+                <div className="summary-line">
+                  <span>Giảm giá</span>
+                  <span>- {discountAmount.toLocaleString("vi-VN")} đ</span>
+                </div>
+              )}
 
               <div className="summary-total">
                 <span>Tổng thanh toán</span>

@@ -9,10 +9,10 @@ const testConnection = async () => {
   try {
     const mongoUri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/cinema_booking";
     await mongoose.connect(mongoUri);
-    console.log("✅ MongoDB connection test successful!");
+    console.log("MongoDB connection test successful!");
     console.log(`Connected to: ${mongoUri}`);
   } catch (error) {
-    console.error("❌ Error connecting to MongoDB:", error);
+    console.error("Error connecting to MongoDB:", error);
   }
 };
 

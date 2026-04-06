@@ -2,6 +2,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import "../../styles/HomePage.css";
 import { getMovies, type Movie as ApiMovie } from "../../services/movie.api";
+import banner1 from "../../assets/images/banners/banner1.jpg";
+import banner2 from "../../assets/images/banners/banner2.jpg";
+import banner3 from "../../assets/images/banners/banner3.jpg";
+import banner4 from "../../assets/images/banners/banner4.jpg";
 import {
   getPromotions,
   type Promotion as ApiPromotion,
@@ -23,12 +27,7 @@ type HomePromotion = {
   code?: string;
 };
 
-const banners: string[] = [
-  "/images/banners/banner1.jpg",
-  "/images/banners/banner2.jpg",
-  "/images/banners/banner3.jpg",
-  "/images/banners/banner4.jpg",
-];
+const banners: string[] = [banner1, banner2, banner3, banner4];
 
 const demoNowShowing: HomeMovie[] = [
   {
@@ -227,7 +226,7 @@ export default function HomePage({
               _id: movie._id,
               title: movie.title,
               poster: movie.poster,
-              genre: movie.genre,
+              genre: (movie.genres || []).join(", "),
               status: movie.status,
             })) || [];
 
@@ -240,7 +239,7 @@ export default function HomePage({
               _id: movie._id,
               title: movie.title,
               poster: movie.poster,
-              genre: movie.genre,
+              genre: (movie.genres || []).join(", "),
               status: movie.status,
             })) || [];
 
@@ -286,7 +285,7 @@ export default function HomePage({
   return (
     <div className="page-home">
       <main>
-        <section className="hero">
+        <section className="hero" style={{ backgroundImage: `linear-gradient(135deg, rgba(20,30,60,0.96), rgba(9,14,28,0.96)), url(${banner1})` }}>
           <div className="container hero-content">
             <div className="hero-text">
               <span className="hero-badge">Đang hot</span>

@@ -87,7 +87,7 @@ export default function PromotionDetailPage() {
     alert("Lưu khuyến mãi thành công!");
   };
 
-  const imageSrc = (promotion as any).image || "/images/promotions/default.jpg";
+  const imageSrc = promotion.imageUrl || (promotion as any).image || "/images/logo/logo.png";
   const badgeText = (promotion as any).discount || "Ưu đãi";
   const title = (promotion as any).title || promotion.code;
   const description =

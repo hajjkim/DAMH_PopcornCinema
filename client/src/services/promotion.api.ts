@@ -3,18 +3,20 @@ import { apiRequest } from "./api";
 export type Promotion = {
   _id: string;
   code: string;
-  description: string;
-  discountType: "percentage" | "fixed";
+  title: string;
+  description?: string;
+  discountType: "PERCENTAGE" | "FIXED_AMOUNT";
   discountValue: number;
   maxDiscount?: number;
   minOrderValue?: number;
   startDate: string;
   endDate: string;
-  isActive: boolean;
+  status?: "ACTIVE" | "INACTIVE" | "EXPIRED";
   usageLimit?: number;
-  usageCount: number;
-  createdAt: string;
-  updatedAt: string;
+  usedCount?: number;
+  imageUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 // Lấy tất cả khuyến mãi

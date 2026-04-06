@@ -35,24 +35,27 @@ export default function RegisterPage() {
 
     if (!form.fullName || !form.email || !form.password || !form.confirmPassword) {
       setError("❌ Vui lòng nhập đầy đủ thông tin");
-      setLoading(false);
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      setError("❌ Email không hợp lệ");
       return;
     }
 
     if (form.password.length < 6) {
       setError("❌ Mật khẩu phải ≥ 6 ký tự");
-      setLoading(false);
       return;
     }
 
     if (form.password !== form.confirmPassword) {
       setError("❌ Mật khẩu không khớp");
-      setLoading(false);
       return;
     }
 
+    setLoading(true);
     try {
-      setLoading(true);
 
       const data = await registerApi(form.fullName, form.email, form.password);
 
