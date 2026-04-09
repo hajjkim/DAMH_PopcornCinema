@@ -36,20 +36,27 @@ export const getAdminStats = async () => {
 
 export const getTopMovies = async (limit: number = 4) => {
   try {
-    // Aggregate bookings by movieId
+    // Aggregate confirmed bookings → join showtime to get movieId → rank by count
     const topMovies = await Booking.aggregate([
+      { $match: { status: "confirmed" } },
       {
-        $group: {
-          _id: "$movieId",
-          bookingCount: { $sum: 1 },
+        $lookup: {
+          from: "showtimes",
+          localField: "showtime",
+          foreignField: "_id",
+          as: "showtimeData",
         },
       },
+      { $unwind: "$showtimeData" },
       {
-        $sort: { bookingCount: -1 },
+        $group: {
+          _id: "$showtimeData.movieId",
+          bookingCount: { $sum: 1 },
+          revenue: { $sum: "$finalTotal" },
+        },
       },
-      {
-        $limit: limit,
-      },
+      { $sort: { bookingCount: -1 } },
+      { $limit: limit },
       {
         $lookup: {
           from: "movies",
@@ -58,15 +65,14 @@ export const getTopMovies = async (limit: number = 4) => {
           as: "movieData",
         },
       },
-      {
-        $unwind: "$movieData",
-      },
+      { $unwind: "$movieData" },
       {
         $project: {
           _id: "$_id",
           title: "$movieData.title",
-          posterUrl: "$movieData.posterUrl",
+          posterUrl: "$movieData.poster",
           bookingCount: 1,
+          revenue: 1,
         },
       },
     ]);
@@ -130,6 +136,35 @@ export const getRevenueStats = async () => {
     console.error("Error getting revenue stats:", error);
     throw new Error("Failed to retrieve revenue statistics");
   }
+};
+
+export const getRevenueChart = async (days: number) => {
+  const endDate = new Date();
+  endDate.setHours(23, 59, 59, 999);
+
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days + 1);
+  startDate.setHours(0, 0, 0, 0);
+
+  const payments = await Payment.find({
+    status: "SUCCESSFUL",
+    createdAt: { $gte: startDate, $lte: endDate },
+  }).lean();
+
+  // Build a map of date -> revenue, pre-filled with 0 for every day
+  const map = new Map<string, number>();
+  for (let d = 0; d < days; d++) {
+    const dt = new Date(startDate);
+    dt.setDate(dt.getDate() + d);
+    map.set(dt.toISOString().slice(0, 10), 0);
+  }
+
+  for (const p of payments) {
+    const key = new Date((p as any).createdAt).toISOString().slice(0, 10);
+    if (map.has(key)) map.set(key, (map.get(key) || 0) + ((p as any).amount || 0));
+  }
+
+  return Array.from(map.entries()).map(([date, revenue]) => ({ date, revenue }));
 };
 
 export const getMoviesReport = async () => {

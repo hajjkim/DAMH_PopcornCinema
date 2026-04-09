@@ -123,6 +123,17 @@ export default function AdminReports() {
 
   const formatCurrency = (v: number) => v.toLocaleString("vi-VN") + "đ";
 
+  const formatMethod = (method: string) => {
+    const map: Record<string, string> = {
+      CREDIT_CARD: "Thẻ tín dụng",
+      DEBIT_CARD: "Thẻ ghi nợ",
+      BANK_TRANSFER: "Chuyển khoản",
+      E_WALLET: "Ví điện tử",
+      CASH: "Tiền mặt",
+    };
+    return map[method] ?? method;
+  };
+
   const calcPercent = (value: number, total: number) =>
     total ? Math.round((value / total) * 100) : 0;
 
@@ -204,8 +215,7 @@ export default function AdminReports() {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Poster</th>
-                <th>Tên</th>
+                <th>Phim</th>
                 <th>Vé</th>
                 <th>Doanh thu</th>
                 <th>%</th>
@@ -218,10 +228,9 @@ export default function AdminReports() {
                   <td>#{i + 1}</td>
 
                   <td>
-                    <img src={m.poster} className="admin-thumb" alt={m.title} />
+                    <span>{m.title}</span>
                   </td>
 
-                  <td>{m.title}</td>
                   <td>{m.ticketsSold}</td>
                   <td>{formatCurrency(m.revenue)}</td>
 
@@ -311,7 +320,7 @@ export default function AdminReports() {
                   <td>{p.userName}</td>
                   <td>{p.userEmail}</td>
                   <td>{p.bookingCode || "N/A"}</td>
-                  <td>{p.method}</td>
+                  <td>{formatMethod(p.method)}</td>
                   <td>{formatCurrency(p.amount)}</td>
                   <td>{p.transactionId}</td>
                   <td>{new Date(p.createdAt).toLocaleDateString("vi-VN")}</td>

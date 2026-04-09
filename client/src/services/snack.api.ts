@@ -5,7 +5,7 @@ export type Snack = {
   name: string;
   description: string;
   price: number;
-  image: string;
+  imageUrl: string;
   category: string;
   stock: number;
   createdAt: string;

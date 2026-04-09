@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../middlewares/auth.middleware";
+import { upload } from "../middlewares/upload.middleware";
 import {
   getAllSnacks,
   getSnackById,
@@ -65,9 +66,13 @@ router.get("/:id", async (req, res) => {
 // ─── Admin routes ─────────────────────────────────────────────────────────────
 
 // Create a snack
-router.post("/", authenticate, authorize("ADMIN"), async (req, res) => {
+router.post("/", authenticate, authorize("ADMIN"), upload.single("image"), async (req, res) => {
   try {
-    const snack = await createSnack(req.body);
+    const body = { ...req.body };
+    if ((req as any).file) {
+      body.imageUrl = `http://localhost:5000/uploads/${(req as any).file.filename}`;
+    }
+    const snack = await createSnack(body);
     res.status(201).json(snack);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -76,9 +81,13 @@ router.post("/", authenticate, authorize("ADMIN"), async (req, res) => {
 });
 
 // Update a snack
-router.put("/:id", authenticate, authorize("ADMIN"), async (req, res) => {
+router.put("/:id", authenticate, authorize("ADMIN"), upload.single("image"), async (req, res) => {
   try {
-    const snack = await updateSnack(String(req.params.id), req.body);
+    const body = { ...req.body };
+    if ((req as any).file) {
+      body.imageUrl = `http://localhost:5000/uploads/${(req as any).file.filename}`;
+    }
+    const snack = await updateSnack(String(req.params.id), body);
     res.status(200).json(snack);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

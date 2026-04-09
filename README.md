@@ -19,6 +19,8 @@ npm run dev
 npm run dev:client
 npm run dev:server
 
+ngrok http 5000
+
 # Seed the database
 npm run seed
 ```

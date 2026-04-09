@@ -6,7 +6,7 @@ import { Seat } from "../schemas/seat.schema";
 export const getAllShowtimes = async () => {
   // Return all showtimes sorted by startTime in descending order (newest first)
   const showtimes = await Showtime.find()
-    .populate("movieId", "title")
+    .populate("movieId", "title poster")
     .populate({
       path: "auditoriumId",
       select: "name cinemaId",
@@ -17,7 +17,8 @@ export const getAllShowtimes = async () => {
     })
     .sort({ startTime: -1 });
 
-  return showtimes;
+  // Filter out showtimes whose referenced movie was deleted (dangling ref)
+  return showtimes.filter((s) => s.movieId != null);
 };
 
 export const getShowtimeById = async (id: string) => {

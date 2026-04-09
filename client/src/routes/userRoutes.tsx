@@ -12,6 +12,7 @@ import PromotionDetailPage from "../pages/user/PromotionDetailPage";
 import SnacksPage from "../pages/user/SnacksPage";
 import TicketPage from "../pages/user/TicketPage";
 import BookingHistoryPage from "../pages/user/BookingHistoryPage";
+import PaymentCancelPage from "../pages/user/PaymentCancelPage";
 
 export const userRoutes = (
   <Route path="/" element={<UserLayout />}>
@@ -28,6 +29,7 @@ export const userRoutes = (
 
     <Route path="profile" element={<ProfilePage />} />
     <Route path="booking-history" element={<BookingHistoryPage />} />
+    <Route path="payment-cancel" element={<PaymentCancelPage />} />
 
     <Route path="promotions" element={<PromotionPage />} />
     <Route path="promotions/:id" element={<PromotionDetailPage />} />

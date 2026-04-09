@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import "../../../styles/Admin/Snacks/AdminSnack.css";
 import { snackAPI } from "../../../services/admin.api";
@@ -6,6 +6,7 @@ import { snackAPI } from "../../../services/admin.api";
 export default function AdminSnackEdit() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -13,7 +14,10 @@ export default function AdminSnackEdit() {
     price: 0,
     status: "ACTIVE",
     description: "",
+    imageUrl: "",
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -30,7 +34,9 @@ export default function AdminSnackEdit() {
           price: snack.price || 0,
           status: snack.status || "ACTIVE",
           description: snack.description || "",
+          imageUrl: snack.imageUrl || "",
         });
+        if (snack.imageUrl) setImagePreview(snack.imageUrl);
       } catch (err: any) {
         console.error("Error fetching snack:", err);
         setError(err.message || "Không thể tải dữ liệu đồ ăn");
@@ -46,6 +52,13 @@ export default function AdminSnackEdit() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
@@ -54,7 +67,12 @@ export default function AdminSnackEdit() {
     setError("");
 
     try {
-      await snackAPI.update(id, form);
+      const { imageUrl, ...rest } = form;
+      if (imageFile) {
+        await snackAPI.updateWithFile(id, rest, imageFile);
+      } else {
+        await snackAPI.update(id, form);
+      }
       alert("Cập nhật đồ ăn thành công!");
       navigate("/admin/snacks");
     } catch (err: any) {
@@ -136,6 +154,39 @@ export default function AdminSnackEdit() {
               <option value="ACTIVE">Hoạt động</option>
               <option value="INACTIVE">Tạm ngưng</option>
             </select>
+          </div>
+
+          <div className="admin-form-group admin-form-group-full">
+            <label>Ảnh</label>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              {imagePreview && (
+                <img
+                  src={imagePreview}
+                  alt="preview"
+                  style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 8, border: "1px solid #ddd" }}
+                  onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
+                />
+              )}
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={handleFileChange}
+                />
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-outline"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {imagePreview ? "Đổi ảnh" : "Chọn ảnh"}
+                </button>
+                {imageFile && (
+                  <span style={{ marginLeft: 10, fontSize: 13, color: "#666" }}>{imageFile.name}</span>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="admin-form-group admin-form-group-full">

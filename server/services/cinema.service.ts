@@ -1,7 +1,16 @@
 import { Cinema } from "../schemas/cinema.schema";
+import { Auditorium } from "../schemas/auditorium.schema";
 
 export const getAllCinemas = async () => {
-    return await Cinema.find().sort({ createdAt: -1 });
+    const cinemas = await Cinema.find().sort({ createdAt: -1 }).lean();
+    const counts = await Auditorium.aggregate([
+        { $group: { _id: "$cinemaId", count: { $sum: 1 } } },
+    ]);
+    const countMap = new Map(counts.map((c: any) => [c._id.toString(), c.count]));
+    return cinemas.map((c: any) => ({
+        ...c,
+        totalRooms: countMap.get(c._id.toString()) ?? 0,
+    }));
 };
 
 export const getCinemaById = async (id: string) => {

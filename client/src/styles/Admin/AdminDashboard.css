@@ -79,12 +79,21 @@
 
 /* ===== CHIP BUTTON ===== */
 .dashboard-chip-btn {
-  background: linear-gradient(90deg, #facc15, #f59e0b);
+  background: rgba(255,255,255,0.1);
   border: none;
   padding: 4px 10px;
   border-radius: 999px;
   cursor: pointer;
   font-weight: 600;
+  color: #fff;
+  font-size: 12px;
+  transition: 0.15s;
+}
+
+.dashboard-chip-btn.active,
+.dashboard-chip-btn:hover {
+  background: linear-gradient(90deg, #facc15, #f59e0b);
+  color: #000;
 }
 
 /* LINK */
@@ -92,6 +101,11 @@
   font-size: 13px;
   text-decoration: none;
   color: #facc15;
+}
+
+.chart-period-btns {
+  display: flex;
+  gap: 6px;
 }
 
 /* ===== CHART ===== */
@@ -104,12 +118,15 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 11px;
   opacity: 0.7;
+  min-width: 54px;
+  text-align: right;
 }
 
 .chart-main {
   flex: 1;
+  min-width: 0;
 }
 
 .chart-grid {
@@ -117,8 +134,8 @@
   height: 180px;
   display: grid;
   grid-template-rows: repeat(5, 1fr);
-  overflow: hidden; 
-  border-radius: 10px; 
+  overflow: hidden;
+  border-radius: 10px;
 }
 
 .chart-grid span {
@@ -147,7 +164,7 @@
 .chart-x-axis {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 11px;
   margin-top: 6px;
   opacity: 0.7;
 }
@@ -164,22 +181,23 @@
 .legend-dot {
   width: 10px;
   height: 10px;
-  background: #3bd16f;
+  background: #facc15;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
 /* ===== TOP MOVIES ===== */
 .top-movie-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .top-movie-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px;
+  padding: 8px 10px;
   border-radius: 10px;
   transition: 0.2s;
 }
@@ -188,21 +206,65 @@
   background: rgba(255,255,255,0.08);
 }
 
+.top-movie-rank {
+  font-size: 13px;
+  font-weight: 700;
+  color: #a0a0b0;
+  min-width: 24px;
+  text-align: center;
+}
+
+.top-movie-item:first-child .top-movie-rank { color: #fbbf24; }
+.top-movie-item:nth-child(2) .top-movie-rank { color: #94a3b8; }
+.top-movie-item:nth-child(3) .top-movie-rank { color: #b45309; }
+
 .top-movie-item img {
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 48px;
   border-radius: 8px;
   object-fit: cover;
+  flex-shrink: 0;
+}
+
+.top-movie-info {
+  flex: 1;
+  min-width: 0;
 }
 
 .top-movie-info strong {
   display: block;
-  font-size: 14px;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.top-movie-info span {
+.top-movie-ticket-count {
+  display: inline-block;
+  margin-top: 3px;
   font-size: 12px;
-  opacity: 0.7;
+  font-weight: 600;
+  color: #3bd16f;
+  background: rgba(59, 209, 111, 0.12);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.top-movie-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+}
+
+.top-movie-revenue {
+  font-size: 12px;
+  font-weight: 600;
+  color: #facc15;
+  background: rgba(250, 204, 21, 0.12);
+  padding: 2px 8px;
+  border-radius: 20px;
 }
 
 /* ===== SUMMARY ===== */
