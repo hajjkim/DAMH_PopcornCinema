@@ -675,6 +675,8 @@ export default function BookingPage() {
     navigate("/snacks", {
       state: {
         ...bookingInfo,
+        movieTitle: currentMovie?.title || bookingInfo.movieTitle,
+        poster: currentMovie?.poster || bookingInfo.poster,
         cinema: selectedCinema,
         time: selectedTime,
         date: showtimeDate || bookingInfo.date,

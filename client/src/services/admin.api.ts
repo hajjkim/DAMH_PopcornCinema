@@ -6,6 +6,9 @@ export const adminAPI = {
   getTopMovies: (limit: number = 4) =>
     apiClient.get(`/admin/top-movies?limit=${limit}`),
 
+  getRevenueChart: (period: "7d" | "14d" | "30d" = "7d") =>
+    apiClient.get(`/admin/revenue-chart?period=${period}`),
+
   getRevenueStats: () => apiClient.get("/admin/revenue-stats"),
 
   getUsersReport: (params?: {
@@ -168,7 +171,29 @@ export const snackAPI = {
 
   create: (data: any) => apiClient.post("/snacks", data),
 
+  createWithFile: (data: any, imageFile: File) => {
+    const formData = new FormData();
+    formData.append("image", imageFile);
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+    return apiRequest("/snacks", { method: "POST", body: formData, auth: true });
+  },
+
   update: (id: string, data: any) => apiClient.put(`/snacks/${id}`, data),
+
+  updateWithFile: (id: string, data: any, imageFile: File) => {
+    const formData = new FormData();
+    formData.append("image", imageFile);
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, String(value));
+      }
+    });
+    return apiRequest(`/snacks/${id}`, { method: "PUT", body: formData, auth: true });
+  },
 
   delete: (id: string) => apiClient.delete(`/snacks/${id}`),
 };

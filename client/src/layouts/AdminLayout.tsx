@@ -4,31 +4,26 @@ import "../styles/Admin/AdminLayout.css";
 import logo from "../assets/images/logo/logo.png";
 
 export default function AdminLayout() {
-  const [openNoti, setOpenNoti] = useState(false);
   const [openUser, setOpenUser] = useState(false);
 
-  const notiRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
 
   const menu = [
-    { path: "/admin/dashboard", label: "Thống kê", icon: "▦" },
-    { path: "/admin/movies", label: "Quản lý phim", icon: "🎬" },
-    { path: "/admin/cinemas", label: "Rạp", icon: "🎯" },
-    { path: "/admin/auditoriums", label: "Phòng chiếu", icon: "🎪" },
-    { path: "/admin/showtimes", label: "Suất chiếu", icon: "🕒" },
-    { path: "/admin/orders", label: "Đơn hàng", icon: "📦" },
-    { path: "/admin/snacks", label: "Bắp nước", icon: "🍿" },
-    { path: "/admin/users", label: "Người dùng", icon: "👤" },
-    { path: "/admin/promotions", label: "Khuyến mãi", icon: "🎟️" },
-    { path: "/admin/reports", label: "Báo cáo", icon: "📊" },
+    { path: "/admin/dashboard", label: "Thống kê", icon: "" },
+    { path: "/admin/movies", label: "Quản lý phim", icon: "" },
+    { path: "/admin/cinemas", label: "Rạp", icon: "" },
+    { path: "/admin/auditoriums", label: "Phòng chiếu", icon: "" },
+    { path: "/admin/showtimes", label: "Suất chiếu", icon: "" },
+    { path: "/admin/orders", label: "Đơn hàng", icon: "" },
+    { path: "/admin/snacks", label: "Bắp nước", icon: "" },
+    { path: "/admin/users", label: "Người dùng", icon: "" },
+    { path: "/admin/promotions", label: "Khuyến mãi", icon: "" },
+    { path: "/admin/reports", label: "Báo cáo", icon: "" },
   ];
 
   // click ngoài để đóng
   useEffect(() => {
     const handleClick = (e: any) => {
-      if (notiRef.current && !notiRef.current.contains(e.target)) {
-        setOpenNoti(false);
-      }
       if (userRef.current && !userRef.current.contains(e.target)) {
         setOpenUser(false);
       }
@@ -79,51 +74,7 @@ export default function AdminLayout() {
 
           <div className="header-right">
 
-            {/* 🔔 NOTIFICATION */}
-            <div
-              className={`admin-notification ${openNoti ? "active" : ""}`}
-              ref={notiRef}
-            >
-              <button
-                className="notification-btn"
-                onClick={() => setOpenNoti(!openNoti)}
-              >
-                🔔
-                <span className="notification-badge">3</span>
-              </button>
-
-              <div className="notification-dropdown">
-                <div className="noti-header">
-                  <h4>🔔 Thông báo</h4>
-                </div>
-
-                <div className="noti-item success">
-                  <div>🛒</div>
-                  <div>
-                    <strong>Đơn hàng mới</strong>
-                    <span>5 đơn hàng mới</span>
-                  </div>
-                </div>
-
-                <div className="noti-item warning">
-                  <div>🔥</div>
-                  <div>
-                    <strong>Phim hot</strong>
-                    <span>Đang bán chạy</span>
-                  </div>
-                </div>
-
-                <div className="noti-item info">
-                  <div>⚙️</div>
-                  <div>
-                    <strong>Hệ thống</strong>
-                    <span>Cập nhật thành công</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 👤 USER */}
+            {/*  USER */}
             <div
               className={`admin-user-dropdown ${openUser ? "active" : ""}`}
               ref={userRef}

@@ -285,7 +285,7 @@ export default function PaymentPage() {
             order_description: `Dat ve phim ${movieMeta?.title || paymentInfo.movieTitle || ""}`,
             success_url: `${window.location.origin}/ticket?bookingId=${booking._id}`,
             error_url: `${window.location.origin}/movies?payment=error`,
-            cancel_url: `${window.location.origin}/movies?payment=cancel`,
+            cancel_url: `${window.location.origin}/payment-cancel?bookingId=${booking._id}`,
           }),
         }
       );

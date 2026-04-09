@@ -130,6 +130,16 @@ export default function TicketPage() {
     return Math.max(discount, 0);
   }, [booking]);
 
+  const cinemaName: string = (showtime as any)?.auditoriumId?.cinemaId?.name || "";
+  const hallName: string = (showtime as any)?.auditoriumId?.name || "";
+  const startTime: Date | null = showtime?.startTime ? new Date(showtime.startTime) : null;
+  const timeLabel = startTime
+    ? startTime.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
+    : "";
+  const dateLabel = startTime
+    ? startTime.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" })
+    : "";
+
   if (loading) return <div className="ticket-page">Đang tải vé...</div>;
   if (error) return <div className="ticket-page error">{error}</div>;
   if (!booking) return null;
@@ -139,11 +149,12 @@ export default function TicketPage() {
       <div className="ticket-card">
         <div className="ticket-header">
           <div className="ticket-meta">
-            <h2>{movie?.title || "Vé xem phim"}</h2>
-            <p>{showtime?.cinema}</p>
+            <h2>{movie?.title || (showtime as any)?.movieId?.title || "Vé xem phim"}</h2>
+            <p>{cinemaName}</p>
             <p>
-              Suất: {showtime?.time} - {showtime?.date}
+              Suất: {timeLabel} - {dateLabel}
             </p>
+            <p>Phòng: {hallName}</p>
             <p>Ghế: {seatLabel}</p>
             <p>Mã vé: {booking._id}</p>
             <p>

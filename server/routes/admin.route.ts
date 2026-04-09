@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../middlewares/auth.middleware";
-import { getAdminStats, getUsersReport, getTopMovies, getRevenueStats, getMoviesReport, getSnacksReport, getPaymentsReport } from "../services/admin.service";
+import { getAdminStats, getUsersReport, getTopMovies, getRevenueStats, getMoviesReport, getSnacksReport, getPaymentsReport, getRevenueChart } from "../services/admin.service";
 
 const router = Router();
 
@@ -25,6 +25,19 @@ router.get("/top-movies", async (req, res) => {
     const limit = req.query.limit ? Number(req.query.limit) : 4;
     const topMovies = await getTopMovies(limit);
     res.status(200).json(topMovies);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ message });
+  }
+});
+
+// Get revenue chart data
+router.get("/revenue-chart", async (req, res) => {
+  try {
+    const period = String(req.query.period || "7d");
+    const days = period === "30d" ? 30 : period === "14d" ? 14 : 7;
+    const data = await getRevenueChart(days);
+    res.status(200).json(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ message });

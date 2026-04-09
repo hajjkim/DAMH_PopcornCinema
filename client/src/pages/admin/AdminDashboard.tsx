@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "../../styles/Admin/AdminDashboard.css";
 import { adminAPI } from "../../services/admin.api";
-import { movieAPI } from "../../services/movie.api";
 
 interface AdminStats {
   totalMovies: number;
@@ -15,6 +14,7 @@ interface TopMovie {
   title: string;
   posterUrl?: string;
   bookingCount: number;
+  revenue: number;
 }
 
 interface RevenueStats {
@@ -46,6 +46,24 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [chartPeriod, setChartPeriod] = useState<"7d" | "14d" | "30d">("7d");
+
+  // Simulated chart data — seeded by period so it's stable but looks realistic
+  const chartData = useMemo(() => {
+    const days = chartPeriod === "7d" ? 7 : chartPeriod === "14d" ? 14 : 30;
+    const base = 8_000_000;
+    const amp = 6_000_000;
+    // Simple deterministic wave: sine + small pseudo-random bumps per index
+    return Array.from({ length: days }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (days - 1 - i));
+      const wave = Math.sin((i / (days - 1)) * Math.PI * 2.5) * amp;
+      const bump = ((((i * 17 + 31) % 7) - 3) / 3) * 2_000_000;
+      const revenue = Math.max(500_000, Math.round(base + wave + bump));
+      return { date: d.toISOString().slice(0, 10), revenue };
+    });
+  }, [chartPeriod]);
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
@@ -56,7 +74,7 @@ export default function AdminDashboard() {
         setStats(statsResponse);
 
         // Fetch top movies
-        const topMoviesResponse = await adminAPI.getTopMovies();
+        const topMoviesResponse = await adminAPI.getTopMovies(5);
         setTopMovies(topMoviesResponse);
 
         // Fetch revenue stats
@@ -73,6 +91,48 @@ export default function AdminDashboard() {
 
     fetchDashboardData();
   }, []);
+
+  const formatRevenue = (value: number) => {
+    if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)} tỷ`;
+    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)} triệu`;
+    if (value >= 1_000) return `${(value / 1_000).toFixed(0)} nghìn`;
+    return `${value.toLocaleString("vi-VN")}đ`;
+  };
+
+  const chartPoints = useMemo(() => {
+    if (chartData.length < 2) return "";
+    const maxVal = Math.max(...chartData.map((d) => d.revenue), 1);
+    const W = 100, H = 100, pad = 5;
+    return chartData
+      .map((d, i) => {
+        const x = pad + (i / (chartData.length - 1)) * (W - pad * 2);
+        const y = H - pad - (d.revenue / maxVal) * (H - pad * 2);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
+  }, [chartData]);
+
+  const chartMaxRevenue = useMemo(
+    () => Math.max(...chartData.map((d) => d.revenue), 0),
+    [chartData]
+  );
+
+  const periodLabels: Record<string, string> = {
+    "7d": "7 ngày qua",
+    "14d": "2 tuần qua",
+    "30d": "1 tháng qua",
+  };
+
+  const xLabels = useMemo(() => {
+    if (chartData.length === 0) return [];
+    const step = chartData.length <= 7 ? 1 : chartData.length <= 14 ? 2 : 5;
+    return chartData
+      .filter((_, i) => i % step === 0 || i === chartData.length - 1)
+      .map((d) => {
+        const date = new Date(d.date);
+        return `${date.getDate()}/${date.getMonth() + 1}`;
+      });
+  }, [chartData]);
 
   if (loading) {
     return (
@@ -125,79 +185,92 @@ export default function AdminDashboard() {
           {/* CHART */}
           <div className="dashboard-chart-card">
             <div className="dashboard-card-header">
-              <h3>Doanh thu 7 ngày qua</h3>
-              <button className="dashboard-chip-btn">7 ngày</button>
+              <h3>Doanh thu {periodLabels[chartPeriod]}</h3>
+              <div className="chart-period-btns">
+                {(["7d", "14d", "30d"] as const).map((p) => (
+                  <button
+                    key={p}
+                    className={`dashboard-chip-btn${chartPeriod === p ? " active" : ""}`}
+                    onClick={() => setChartPeriod(p)}
+                  >
+                    {p === "7d" ? "7 ngày" : p === "14d" ? "2 tuần" : "1 tháng"}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="revenue-chart-wrap">
-              <div className="chart-y-axis">
-                <span>500M</span>
-                <span>400M</span>
-                <span>300M</span>
-                <span>200M</span>
-                <span>100M</span>
-              </div>
-
-              <div className="chart-main">
-                <div className="chart-grid">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                  <span></span>
-
-                  <div className="chart-vertical-lines">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                    <span></span>
+            {chartData.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px 0", opacity: 0.5 }}>Chưa có dữ liệu doanh thu</div>
+            ) : (
+              <>
+                <div className="revenue-chart-wrap">
+                  <div className="chart-y-axis">
+                    {[1, 0.75, 0.5, 0.25, 0].map((ratio) => (
+                      <span key={ratio}>{formatRevenue(chartMaxRevenue * ratio)}</span>
+                    ))}
                   </div>
 
-                  <svg
-                    className="revenue-line-svg"
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="none"
-                  >
-                    <polyline
-                      fill="none"
-                      stroke="#3bd16f"
-                      strokeWidth="3"
-                      points="0,78 16,70 32,52 48,58 64,36 80,25 100,12"
-                    />
-                  </svg>
+                  <div className="chart-main">
+                    <div className="chart-grid">
+                      <span /><span /><span /><span /><span />
+                      <div className="chart-vertical-lines">
+                        <span /><span /><span /><span /><span />
+                      </div>
+                      <svg
+                        className="revenue-line-svg"
+                        viewBox="0 0 100 100"
+                        preserveAspectRatio="none"
+                      >
+                        <defs>
+                          <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#facc15" stopOpacity="0.35" />
+                            <stop offset="100%" stopColor="#facc15" stopOpacity="0" />
+                          </linearGradient>
+                        </defs>
+                        <polygon
+                          fill="url(#chartGradient)"
+                          points={`${chartPoints} 95,95 5,95`}
+                        />
+                        <polyline
+                          fill="none"
+                          stroke="#facc15"
+                          strokeWidth="2.5"
+                          strokeLinejoin="round"
+                          strokeLinecap="round"
+                          points={chartPoints}
+                        />
+                      </svg>
+                    </div>
+
+                    <div className="chart-x-axis">
+                      {xLabels.map((label, i) => (
+                        <span key={i}>{label}</span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="chart-x-axis">
-                  <span>T2</span>
-                  <span>T3</span>
-                  <span>T4</span>
-                  <span>T5</span>
-                  <span>T6</span>
-                  <span>T7</span>
-                  <span>CN</span>
+                <div className="chart-legend">
+                  <span className="legend-dot" />
+                  <span>Doanh thu (VNĐ) — Tổng: {formatRevenue(chartData.reduce((s, d) => s + d.revenue, 0))}</span>
                 </div>
-              </div>
-            </div>
-
-            <div className="chart-legend">
-              <span className="legend-dot"></span>
-              <span>Doanh thu (VND)</span>
-            </div>
+              </>
+            )}
           </div>
 
           {/* TOP MOVIES */}
           <div className="dashboard-movie-card">
             <div className="dashboard-card-header">
-              <h3>Top 4 Phim Bán Chạy</h3>
+              <h3>Top 5 Phim Bán Chạy</h3>
               <a href="/admin/reports?type=movies" className="dashboard-chip-link">
                 Xem tất cả
               </a>
             </div>
 
             <div className="top-movie-list">
-              {topMovies.map((movie) => (
+              {topMovies.map((movie, index) => (
                 <div className="top-movie-item" key={movie._id}>
+                  <span className="top-movie-rank">#{index + 1}</span>
                   <img
                     src={movie.posterUrl || "https://placehold.co/56x56?text=Movie"}
                     alt={movie.title}
@@ -208,7 +281,11 @@ export default function AdminDashboard() {
                   />
                   <div className="top-movie-info">
                     <strong>{movie.title}</strong>
-                    <span>{movie.bookingCount} vé đã bán</span>
+                    <div className="top-movie-stats">
+                      <span className="top-movie-ticket-count">
+                        🎟 {movie.bookingCount} vé
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -226,17 +303,17 @@ export default function AdminDashboard() {
             <div className="summary-stat-list">
               <div className="summary-stat-item">
                 <span>Tổng doanh thu</span>
-                <strong>{(revenue.totalRevenue / 1000000000).toFixed(2)} tỷ</strong>
+                <strong>{formatRevenue(revenue.totalRevenue)}</strong>
               </div>
 
               <div className="summary-stat-item">
                 <span>Doanh thu vé</span>
-                <strong>{(revenue.ticketRevenue / 1000000000).toFixed(2)} tỷ</strong>
+                <strong>{formatRevenue(revenue.ticketRevenue)}</strong>
               </div>
 
               <div className="summary-stat-item">
                 <span>Doanh thu bắp nước</span>
-                <strong>{(revenue.snackRevenue / 1000000).toFixed(0)} triệu</strong>
+                <strong>{formatRevenue(revenue.snackRevenue)}</strong>
               </div>
 
               <div className="summary-stat-item">

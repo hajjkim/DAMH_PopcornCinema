@@ -503,4 +503,26 @@ router.get("/:id", authenticate, async (req, res) => {
   }
 });
 
+// Cancel a booking — user can only cancel their own pending booking
+router.patch("/:id/cancel", authenticate, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+    if (booking.user.toString() !== String(req.auth!.userId)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+    if (!["pending_payment", "pending_confirmation"].includes(booking.status)) {
+      return res.status(400).json({ message: "Booking cannot be cancelled" });
+    }
+    booking.status = "failed";
+    await booking.save();
+    res.status(200).json({ message: "Booking cancelled", status: "failed" });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(400).json({ message });
+  }
+});
+
 export default router;

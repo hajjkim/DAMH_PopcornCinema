@@ -13,6 +13,9 @@ import { SeatHold } from "./schemas/seat-hold.schema";
 import { Cinema } from "./schemas/cinema.schema";
 import { Auditorium } from "./schemas/auditorium.schema";
 import { Seat } from "./schemas/seat.schema";
+import { Payment } from "./schemas/payment.schema";
+import { PaymentTransaction } from "./schemas/payment-transaction.schema";
+import { BookingSnack } from "./schemas/booking-snack.schema";
 
 // Load .env from root folder
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
@@ -51,6 +54,9 @@ async function seed() {
     Cinema.deleteMany({}),
     Auditorium.deleteMany({}),
     Seat.deleteMany({}),
+    Payment.deleteMany({}),
+    PaymentTransaction.deleteMany({}),
+    BookingSnack.deleteMany({}),
   ]);
   console.log("Old data cleared");
 
@@ -375,7 +381,9 @@ async function seed() {
     nowShowingDates.push(date.toISOString().slice(0, 10));
   }
   
-  const showtimes = [];
+  const showtimes: any[] = [];
+  // Map movieId (string) -> array of showtime docs for this movie
+  const movieShowtimesMap = new Map<string, any[]>();
 
   const parseTime = (dateStr: string, timeStr: string) => {
     const [hours, minutes] = timeStr.split(":").map(Number);
@@ -414,6 +422,9 @@ async function seed() {
             status: "OPEN",
           });
           showtimes.push(showtime);
+          const mk = movie._id.toString();
+          if (!movieShowtimesMap.has(mk)) movieShowtimesMap.set(mk, []);
+          movieShowtimesMap.get(mk)!.push(showtime);
         }
       }
     } else {
@@ -447,6 +458,9 @@ async function seed() {
             status: "OPEN",
           });
           showtimes.push(showtime);
+          const mk2 = movie._id.toString();
+          if (!movieShowtimesMap.has(mk2)) movieShowtimesMap.set(mk2, []);
+          movieShowtimesMap.get(mk2)!.push(showtime);
         }
       }
     }
@@ -506,21 +520,110 @@ async function seed() {
     },
   ]);
 
-  // BOOKINGS (demo)
-  await Booking.insertMany([
-    {
-      user: users[0]._id,
-      showtime: showtimes[0]._id,
-      bookingCode: generateBookingCode(),
-      seats: ["A1", "A2"],
-      snacks: [{ snackId: snacks[0]._id, qty: 1 }],
-      promotionCode: promotions[0].code,
-      ticketTotal: 200000,
-      snackTotal: 50000,
-      finalTotal: 175000,
-      status: "confirmed",
-    },
-  ]);
+  // BOOKINGS & PAYMENTS
+  // Desired ranking (movieIndex in movies[] -> booking count)
+  const bookingDistribution: { idx: number; count: number; basePrice: number }[] = [
+    { idx: 0,  count: 18, basePrice: 100000 }, // Super Mario Thiên Hà
+    { idx: 9,  count: 14, basePrice: 120000 }, // Kiki's Delivery IMAX
+    { idx: 5,  count: 11, basePrice: 100000 }, // Greenland 2
+    { idx: 1,  count: 8,  basePrice: 100000 }, // TÀI
+    { idx: 2,  count: 5,  basePrice: 100000 }, // Quỷ Nhập Tràng 2
+    { idx: 4,  count: 3,  basePrice: 90000  }, // Cú Nhảy Kỳ Diệu
+    { idx: 6,  count: 2,  basePrice: 90000  }, // Tuyển Thủ Dê
+  ];
+
+  const paymentMethods = ["CREDIT_CARD", "DEBIT_CARD", "E_WALLET", "BANK_TRANSFER"] as const;
+  // Track seats already booked per showtime to avoid duplicates
+  const usedSeatsPerShowtime = new Map<string, Set<string>>();
+
+  function pickFreeSeats(showtimeId: string, count: number): string[] {
+    if (!usedSeatsPerShowtime.has(showtimeId)) usedSeatsPerShowtime.set(showtimeId, new Set());
+    const used = usedSeatsPerShowtime.get(showtimeId)!;
+    const rowNames = "ABCDEFGHIJ";
+    const picked: string[] = [];
+    outer: for (const r of rowNames) {
+      for (let c = 1; c <= 12; c++) {
+        const seat = `${r}${c}`;
+        if (!used.has(seat)) { picked.push(seat); used.add(seat); if (picked.length === count) break outer; }
+      }
+    }
+    return picked;
+  }
+
+  let totalBookingsCreated = 0;
+  let totalPaymentsCreated = 0;
+
+  for (const dist of bookingDistribution) {
+    const movie = movies[dist.idx];
+    const movieKey = movie._id.toString();
+    const movieShowtimes = movieShowtimesMap.get(movieKey) || [];
+    if (movieShowtimes.length === 0) continue;
+
+    for (let b = 0; b < dist.count; b++) {
+      const showtime = movieShowtimes[b % movieShowtimes.length];
+      const user = users[b % users.length];
+      const seatsCount = (b % 3) + 1; // 1, 2, or 3 seats
+      const seats = pickFreeSeats(showtime._id.toString(), seatsCount);
+      if (seats.length === 0) continue;
+
+      const ticketTotal = dist.basePrice * seats.length;
+      const snackTotal = b % 2 === 0 ? snacks[b % snacks.length].price : 0;
+      const finalTotal = ticketTotal + snackTotal;
+      const bookingSnacks = snackTotal > 0 ? [{ snackId: snacks[b % snacks.length]._id.toString(), qty: 1 }] : [];
+
+      const booking = await Booking.create({
+        user: user._id,
+        showtime: showtime._id,
+        bookingCode: generateBookingCode(),
+        seats,
+        snacks: bookingSnacks,
+        ticketTotal,
+        snackTotal,
+        finalTotal,
+        status: "confirmed",
+      });
+
+      // BookingSnack — populate the separate collection used by getSnacksReport
+      if (snackTotal > 0) {
+        const snack = snacks[b % snacks.length];
+        await BookingSnack.create({
+          bookingId: booking._id,
+          snackId: snack._id,
+          quantity: 1,
+          price: snack.price,
+          totalPrice: snack.price,
+        });
+      }
+
+      // PaymentTransaction (required by Payment schema)
+      const paidAt = new Date();
+      const expiresAt = new Date(paidAt.getTime() + 15 * 60 * 1000);
+      const ptx = await PaymentTransaction.create({
+        orderCode: `TXN-${Date.now()}-${Math.floor(Math.random() * 99999)}`,
+        userId: user._id,
+        showtimeId: showtime._id,
+        bookingId: booking._id,
+        amount: finalTotal,
+        status: "PAID",
+        expiresAt,
+        paidAt,
+      });
+
+      // Payment
+      await Payment.create({
+        paymentTransactionId: ptx._id,
+        userId: user._id,
+        bookingId: booking._id,
+        method: paymentMethods[b % paymentMethods.length],
+        amount: finalTotal,
+        status: "SUCCESSFUL",
+        paidAt,
+      });
+
+      totalBookingsCreated++;
+      totalPaymentsCreated++;
+    }
+  }
 
   console.log("\n✅ Seed complete with updated April 2026 data");
   console.log(`  Users:        ${users.length}`);
@@ -530,6 +633,8 @@ async function seed() {
   console.log(`  Showtimes:    ${showtimes.length}`);
   console.log(`  Snacks:       ${snacks.length}`);
   console.log(`  Promotions:   ${promotions.length}`);
+  console.log(`  Bookings:     ${totalBookingsCreated}`);
+  console.log(`  Payments:     ${totalPaymentsCreated}`);
 
   mongoose.disconnect();
 }

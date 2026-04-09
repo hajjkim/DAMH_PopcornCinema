@@ -126,7 +126,7 @@ export default function SnacksPage() {
                 return (
                   <div className="snack-card" key={item._id}>
                     <div className="snack-image-wrap">
-                      <img src={item.image} alt={item.name} />
+                      <img src={item.imageUrl} alt={item.name} />
                     </div>
 
                     <div className="snack-content">
